@@ -79,14 +79,10 @@ int main(int argc, char *argv[])
                         buffer[n] = '\0';
                         puts(buffer);
 
-                        sockaddr_in *addr_in = reinterpret_cast<sockaddr_in*>(cliaddr);
-                        char *s = inet_ntoa(addr_in->sin_addr);
-
                         FILE* file = fopen("./testOutput.txt", "wb");
                         for (int i = 0; i<n; i++){
                                 fputc(buffer[i], file);
                         }
-                        fprintf(file, s);
                         fclose(file);
                                 
                         // send the response

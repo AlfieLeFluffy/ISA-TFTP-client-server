@@ -7,8 +7,8 @@ CFLAGS=
 all: tftp
 
 tftp:
-	$(CC) $(CFLAGS) ./src/tftp-server.c -o ./tftp-server
-	$(CC) $(CFLAGS) ./src/tftp-client.c -o ./tftp-client
+	$(CC) $(CFLAGS) ./src/tftp-server.c -o ./bin/tftp-server
+	$(CC) $(CFLAGS) ./src/tftp-client.c -o ./bin/tftp-client
 
 clean:
 	rm -f tftp-client
