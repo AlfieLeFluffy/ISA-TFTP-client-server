@@ -82,6 +82,9 @@ int main(int argc, char *argv[])
         exit(0);
     }
 
+    struct sockaddr_in *sin = (struct sockaddr_in *)&servaddr;
+    fprintf(stdout, "Request sent to %s:%d\n", inet_ntoa(sin->sin_addr), sin->sin_port);
+
     // request to send datagram
     // no need to specify server address in sendto
     // connect stores the peers IP and port

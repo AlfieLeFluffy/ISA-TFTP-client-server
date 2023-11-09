@@ -24,33 +24,32 @@ int main(int argc, char *argv[])
 
 
         while ((c = getopt (argc, argv, "p:")) != -1)
-        switch (c)
-        {
-        case 'p':
-                port = atoi(optarg);
-                break;
-        case '?':
-        if (optopt == 'c')
-                fprintf (stderr, "Option -%c requires an argument.\n", optopt);
-        else if (isprint (optopt))
-                fprintf (stderr, "Unknown option `-%c'.\n", optopt);
-        else
-                fprintf (stderr,
-                        "Unknown option character `\\x%x'.\n",
-                        optopt);
-                return 1;
-        default:
-                abort ();       
+                switch (c){
+                        case 'p':
+                                port = atoi(optarg);
+                                break;
+                        case '?':
+                                if (optopt == 'c')
+                                        fprintf (stderr, "Option -%c requires an argument.\n", optopt);
+                                else if (isprint (optopt))
+                                        fprintf (stderr, "Unknown option `-%c'.\n", optopt);
+                                else
+                                        fprintf (stderr,
+                                                "Unknown option character `\\x%x'.\n",
+                                                optopt);
+                                        return 1;
+                        default:
+                                abort ();       
         }
 
         for (index = optind; index < argc; index++)
-        printf ("Non-option argument %s\n", argv[index]);
+                printf ("Non-option argument %s\n", argv[index]);
 
         char buffer[100];
 
         for (int i = 0; i<100;i++){
                 buffer[i] = '\0';
-        }
+        }       
 
         char *message = "Hello Client\0";
         int listenfd, len;
@@ -78,6 +77,9 @@ int main(int argc, char *argv[])
                 while(!fork()){
                         buffer[n] = '\0';
                         puts(buffer);
+
+                        struct sockaddr_in *sin = (struct sockaddr_in *)&cliaddr;
+                        fprintf(stdout, "Incoming request from %s:%d\n", inet_ntoa(sin->sin_addr), sin->sin_port);
 
                         FILE* file = fopen("./testOutput.txt", "wb");
                         for (int i = 0; i<n; i++){
