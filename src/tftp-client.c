@@ -39,7 +39,7 @@ int main(int argc, char *argv[])
                 port = atoi(optarg);
                 break;
             case 'f':
-                filePathOutput = optarg;
+                filePathOutput = parseFilePath(optarg);
                 break;
             case 't':
                 targetPath = optarg;
@@ -65,14 +65,14 @@ int main(int argc, char *argv[])
         fprintf(stdout, "File path is in an incorrect format\n");
         exit(1);
     }
-    else if (filePathOutput != NULL && optind < argc){
-        fprintf(stdout, "Can't both download and upload in the same command\n");
-        exit(1);
-    }
-    else if (filePathOutput != NULL){
+    else if (optind < argc){
         filePathInput = parseFilePath(argv[optind]);
     }
 
+    if (filePathOutput != NULL && filePathInput != NULL){
+        fprintf(stdout, "Can't both download and upload in the same command\n");
+        exit(1);
+    }
 
     char buffer[100];
     char *message = "Hello Server\0";

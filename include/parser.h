@@ -16,7 +16,6 @@ char* parseFolderPath(char* _folderPath){
 }
 
 char* parseFilePath(char* _filePath){
-    puts(_filePath);
     if (access(_filePath, F_OK) == 0) return _filePath;
     fprintf(stdout, "Selected file path is not accesable or doesn't exist: %s\n", _filePath);
     exit(1);
