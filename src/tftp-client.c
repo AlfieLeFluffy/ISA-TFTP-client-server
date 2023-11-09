@@ -11,6 +11,7 @@
 #include <string.h>
 
 #include "../include/common.h"
+#include "../include/parser.h"
 #include "../include/packet-stuct.h"
 
 #define MAXLINE 1000
@@ -20,7 +21,8 @@ int main(int argc, char *argv[])
 {
     char *ip = NULL;
     int port = 69;
-    char *filePath = NULL;
+    char *filePathOutput = NULL;
+    char *filePathInput = NULL;
     char *targetPath = NULL;
     int index;
     int c;
@@ -28,37 +30,48 @@ int main(int argc, char *argv[])
     opterr = 0;
 
 
-    while ((c = getopt (argc, argv, "h:p:f:t:")) != -1)
-    switch (c)
-        {
-        case 'h':
-            ip = optarg;
-            break;
-        case 'p':
-            port = atoi(optarg);
-            break;
-        case 'f':
-            filePath = optarg;
-            break;
-        case 't':
-            targetPath = optarg;
-            break;
-        case '?':
-        if (optopt == 'c')
-            fprintf (stderr, "Option -%c requires an argument.\n", optopt);
-        else if (isprint (optopt))
-            fprintf (stderr, "Unknown option `-%c'.\n", optopt);
-        else
-            fprintf (stderr,
-                    "Unknown option character `\\x%x'.\n",
-                    optopt);
-        return 1;
-        default:
-        abort ();
+    while ((c = getopt (argc, argv, "h:p:f:t:")) != -1){
+        switch (c){
+            case 'h':
+                ip = optarg;
+                break;
+            case 'p':
+                port = atoi(optarg);
+                break;
+            case 'f':
+                filePathOutput = optarg;
+                break;
+            case 't':
+                targetPath = optarg;
+                break;
+            case '?':
+                if (isprint (optopt)){
+                        fprintf (stdout, "Unknown option `-%c'.\n", optopt);
+                        exit(1);
+                }
+                            
+                else{
+                    fprintf (stdout, "Unknown option character `\\x%x'.\n", optopt);
+                    exit(1);
+                }
+                break;
+            default:
+                abort ();  
+                break;   
         }
+    }
 
-    for (index = optind; index < argc; index++)
-    printf ("Non-option argument %s\n", argv[index]);
+    if(optind+1 < argc){
+        fprintf(stdout, "File path is in an incorrect format\n");
+        exit(1);
+    }
+    else if (filePathOutput != NULL && optind < argc){
+        fprintf(stdout, "Can't both download and upload in the same command\n");
+        exit(1);
+    }
+    else if (filePathOutput != NULL){
+        filePathInput = parseFilePath(argv[optind]);
+    }
 
 
     char buffer[100];
