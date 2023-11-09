@@ -9,9 +9,12 @@
 #include <ctype.h>
 #include <stdlib.h>
 #include <string.h>
+#include <dirent.h>
 
 #include "../include/common.h"
+#include "../include/parser.h"
 #include "../include/packet-stuct.h"
+
 
 #define MAXLINE 1000
   
@@ -20,6 +23,7 @@ int main(int argc, char *argv[])
         int port = 69;
         int index;
         int c;
+        char* folderPath;
         opterr = 0;
 
 
@@ -29,21 +33,28 @@ int main(int argc, char *argv[])
                                 port = atoi(optarg);
                                 break;
                         case '?':
-                                if (optopt == 'c')
-                                        fprintf (stderr, "Option -%c requires an argument.\n", optopt);
-                                else if (isprint (optopt))
-                                        fprintf (stderr, "Unknown option `-%c'.\n", optopt);
-                                else
-                                        fprintf (stderr,
-                                                "Unknown option character `\\x%x'.\n",
-                                                optopt);
-                                        return 1;
+                                if (isprint (optopt)){
+                                        fprintf (stdout, "Unknown option `-%c'.\n", optopt);
+                                        exit(1);
+                                }
+                                        
+                                else{
+                                        fprintf (stdout, "Unknown option character `\\x%x'.\n", optopt);
+                                        exit(1);
+                                }
+                                break;
                         default:
-                                abort ();       
+                                abort ();  
+                                break;     
         }
 
-        for (index = optind; index < argc; index++)
-                printf ("Non-option argument %s\n", argv[index]);
+        if(optind+1 < argc){
+                fprintf(stdout, "Folder path is in an incorrect format\n");
+                exit(1);
+        }
+        else{
+                folderPath = parseFolderPath(argv[optind]);
+        }
 
         char buffer[100];
 
