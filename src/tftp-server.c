@@ -62,7 +62,7 @@ int main(int argc, char *argv[])
                 buffer[i] = '\0';
         }       
 
-        char *message = "Hello Client\0";
+        
         int listenfd, len;
         struct sockaddr_in servaddr, cliaddr;
         bzero(&servaddr, sizeof(servaddr));
@@ -82,24 +82,27 @@ int main(int argc, char *argv[])
         while(1){
                 //receive the datagram
                 len = sizeof(cliaddr);
-                int n = recvfrom(listenfd, buffer, sizeof(buffer),
-                        0, (struct sockaddr*)&cliaddr,&len); //receive message from server
+                int n = recvfrom(listenfd, buffer, sizeof(buffer),0, (struct sockaddr*)&cliaddr,&len); //receive message from server
                 
                 while(!fork()){
-                        buffer[n] = '\0';
-                        puts(buffer);
 
                         struct sockaddr_in *sin = (struct sockaddr_in *)&cliaddr;
-                        fprintf(stdout, "Incoming request from %s:%d\n", inet_ntoa(sin->sin_addr), sin->sin_port);
 
-                        FILE* file = fopen("./testOutput.txt", "wb");
-                        for (int i = 0; i<n; i++){
-                                fputc(buffer[i], file);
+                        char *filename;
+                        char *mode;
+                        int opcode = RRQ_WRQ_packet_read(buffer, filename, mode);
+
+                        for (int i = 0; i< n; i++){
+                                printf("%c ", buffer[i]);
                         }
-                        fclose(file);
+
+                        fprintf(stdout, "Incoming request from %s:%d of OPCODE: %d on a file: %s in mode %s \n", inet_ntoa(sin->sin_addr), sin->sin_port, opcode, filename, mode);
+
+
                                 
                         // send the response
-                        sendto(listenfd, message, MAXLINE, 0,
+                        char *message = "Hello Client\0";
+                        sendto(listenfd, message, strlen(message), 0,
                                 (struct sockaddr*)&cliaddr, sizeof(cliaddr));
 
                         return 0;

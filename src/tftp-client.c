@@ -75,7 +75,7 @@ int main(int argc, char *argv[])
     }
 
     char buffer[100];
-    char *message = "Hello Server\0";
+    char *message = "\0";
     int sockfd, n;
     struct sockaddr_in servaddr;
         
@@ -95,18 +95,22 @@ int main(int argc, char *argv[])
         exit(0);
     }
 
-    struct sockaddr_in *sin = (struct sockaddr_in *)&servaddr;
-    fprintf(stdout, "Request sent to %s:%d\n", inet_ntoa(sin->sin_addr), sin->sin_port);
+    int sizeOfPacket;
+    char* requestPacket = RRQ_WRQ_packet_create(&sizeOfPacket,1,"test","netascii");
 
     // request to send datagram
     // no need to specify server address in sendto
     // connect stores the peers IP and port
-    sendto(sockfd, message, strlen(message), 0, (struct sockaddr*)NULL, sizeof(servaddr));
+    sendto(sockfd, requestPacket, sizeOfPacket, 0, (struct sockaddr*)NULL, sizeof(servaddr));
+
+    struct sockaddr_in *sin = (struct sockaddr_in *)&servaddr;
+    fprintf(stdout, "Request sent to %s:%d\n", inet_ntoa(sin->sin_addr), sin->sin_port);
         
     // waiting for response
     recvfrom(sockfd, buffer, sizeof(buffer), 0, (struct sockaddr*)NULL, NULL);
     puts(buffer);
 
     // close the descriptor
+    free(requestPacket);
     close(sockfd);
 }
