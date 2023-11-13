@@ -74,6 +74,12 @@ int main(int argc, char *argv[])
         exit(1);
     }
 
+    if (ip == NULL){
+        fprintf(stdout, "ERROR: -h is a required argument (IP of server)\n");
+        exit(1);
+    }
+
+    // definition of variables used
     char buffer[100];
     char *message = "\0";
     int sockfd, n;
@@ -102,9 +108,8 @@ int main(int argc, char *argv[])
     // no need to specify server address in sendto
     // connect stores the peers IP and port
     sendto(sockfd, requestPacket, sizeOfPacket, 0, (struct sockaddr*)NULL, sizeof(servaddr));
-
-    struct sockaddr_in *sin = (struct sockaddr_in *)&servaddr;
-    fprintf(stdout, "Request sent to %s:%d\n", inet_ntoa(sin->sin_addr), sin->sin_port);
+    
+    fprintf(stdout, "Request sent to %s:%d\n", inet_ntoa(servaddr.sin_addr), servaddr.sin_port);
         
     // waiting for response
     recvfrom(sockfd, buffer, sizeof(buffer), 0, (struct sockaddr*)NULL, NULL);

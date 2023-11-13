@@ -63,9 +63,10 @@ int main(int argc, char *argv[])
         }       
 
         
-        int listenfd, len;
+        int listenfd, len, requestNum;
         struct sockaddr_in servaddr, cliaddr;
         bzero(&servaddr, sizeof(servaddr));
+        requestNum = 0;
 
         // Create a UDP Socket
         listenfd = socket(AF_INET, SOCK_DGRAM, 0);        
@@ -75,7 +76,7 @@ int main(int argc, char *argv[])
 
         // bind server address to socket descriptor
         if(bind(listenfd, (struct sockaddr*)&servaddr, sizeof(servaddr))){
-                fprintf(stdout, "Error creating socket, could not bind\n");
+                fprintf(stdout, "ERROR: creating socket, could not bind\n");
                 exit(1);
         }
 
@@ -83,20 +84,23 @@ int main(int argc, char *argv[])
                 //receive the datagram
                 len = sizeof(cliaddr);
                 int n = recvfrom(listenfd, buffer, sizeof(buffer),0, (struct sockaddr*)&cliaddr,&len); //receive message from server
+                requestNum++;
                 
                 while(!fork()){
 
                         struct sockaddr_in *sin = (struct sockaddr_in *)&cliaddr;
 
-                        char *filename;
-                        char *mode;
+                        // write out the request buffer
+                        /*for (int i = 0; i< n; i++){
+                                printf("%d ", buffer[i]);
+                        }
+                        fprintf(stdout, "\n");*/
+
+                        char filename[n];
+                        char mode[50];
                         int opcode = RRQ_WRQ_packet_read(buffer, filename, mode);
 
-                        for (int i = 0; i< n; i++){
-                                printf("%c ", buffer[i]);
-                        }
-
-                        fprintf(stdout, "Incoming request from %s:%d of OPCODE: %d on a file: %s in mode %s \n", inet_ntoa(sin->sin_addr), sin->sin_port, opcode, filename, mode);
+                        fprintf(stdout, "%d. Incoming request from '%s:%d' of OPCODE: '%d' on a file: '%s' in mode '%s'\n", requestNum, inet_ntoa(sin->sin_addr), sin->sin_port, opcode, filename, mode);
 
 
                                 

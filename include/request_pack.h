@@ -41,11 +41,31 @@ char* RRQ_WRQ_packet_create(int* returnSize,int opcode, char* filename, char* mo
 
 int RRQ_WRQ_packet_read(char* packet, char* filename, char* mode){
     if(0>packet[1]>9){
-        fprintf(stdout, "Client send a frond OPCODE of %d", packet[1]);
+        fprintf(stdout, "Client send an incorrect OPCODE of %d\n", packet[1]);
         return -1;
     }
     else{
-        return packet[1];
+        int index = 2;
+        
+        while (packet[index] != 0){
+            char charStr[2];
+            charStr [0] = packet[index];
+            charStr[1] = '\0';
+            strcat(filename, charStr);
+            index++;
+        }
+
+        index++;
+
+        while(packet[index] != 0){
+            char charStr[2];
+            charStr [0] = packet[index];
+            charStr[1] = '\0';
+            strcat(mode, charStr);
+            index++;
+        }
+
+        return (int)packet[1];
     }
     return -1;
 }
