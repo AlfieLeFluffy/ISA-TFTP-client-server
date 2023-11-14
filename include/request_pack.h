@@ -1,46 +1,41 @@
-#define HEADER_SIZE 8
-#define PACKET_SIZE 1024
-
-
-char* RRQ_WRQ_packet_create(int* returnSize,int opcode, char* filename, char* mode/*, char (*options)[]*/) { 
-    size_t sizeOfPacket = 4+strlen(filename)+strlen(mode);
+char* RRQ_WRQ_packet_create(int* _returnSize,int _opcode, char* _filename, char* _mode/*, char (*options)[]*/) { 
+    size_t sizeOfPacket = 4+strlen(_filename)+strlen(_mode);
     char* packet = (char *) malloc(sizeOfPacket);
 
-    if (1>opcode>9){
+    if (_opcode != 1 && _opcode != 2){
         fprintf (stdout, "Internal ERROR (wrong OPCODE)");
         exit(1);
     }
-    if(filename==NULL){
+    if(_filename==NULL){
         fprintf (stdout, "Internal ERROR (wrong FILENAME)");
         exit(1);
     }
-    if(mode==NULL){
+    if(_mode==NULL){
         fprintf (stdout, "Internal ERROR (wrong MODE)");
         exit(1);
     }
 
     char nullRepl[] = {32};
+
     strcpy(packet, nullRepl);
-    packet[1] = opcode;
-    strcat(packet, filename);
+    packet[1] = _opcode;
+    strcat(packet, _filename);
     strcat(packet, nullRepl);
-    strcat(packet, mode);
+    strcat(packet, _mode);
     strcat(packet, nullRepl);
 
-    printf("contents of char* array: ");
     for (int i = 0; i <= sizeOfPacket;i++){
         if(packet[i]== nullRepl[0]){
             packet[i] = (char)0;
         }
-        printf("%i ", packet[i]);
     }
 
-    *returnSize = sizeOfPacket;
+    *_returnSize = sizeOfPacket;
     return packet;
 }
 
-int RRQ_WRQ_packet_read(char* packet, char* filename, char* mode){
-    if(0>packet[1]>9){
+int RRQ_WRQ_packet_read(char* packet, char* _filename, char* _mode){
+    if(packet[1] != 1 && packet[1] != 2){
         fprintf(stdout, "Client send an incorrect OPCODE of %d\n", packet[1]);
         return -1;
     }
@@ -51,9 +46,10 @@ int RRQ_WRQ_packet_read(char* packet, char* filename, char* mode){
             char charStr[2];
             charStr [0] = packet[index];
             charStr[1] = '\0';
-            strcat(filename, charStr);
+            strcat(_filename, charStr);
             index++;
         }
+        strcat(_filename, "\0");
 
         index++;
 
@@ -61,11 +57,23 @@ int RRQ_WRQ_packet_read(char* packet, char* filename, char* mode){
             char charStr[2];
             charStr [0] = packet[index];
             charStr[1] = '\0';
-            strcat(mode, charStr);
+            strcat(_mode, charStr);
             index++;
         }
+        strcat(_mode, "\0");
 
         return (int)packet[1];
     }
     return -1;
+}
+
+void RRQ_WRQ_request_write(int _opcode, struct sockaddr_in* _sin, char* _filePath, char* _mode){
+    switch(_opcode){
+        case 1:
+                fprintf(stderr, "RRQ %s:%d \"%s\" %s {$OPTS}\n", inet_ntoa(_sin->sin_addr),_sin->sin_port, _filePath, _mode);
+                break;
+        case 2:
+                fprintf(stderr, "WRQ %s:%d \"%s\" %s {$OPTS}\n", inet_ntoa(_sin->sin_addr),_sin->sin_port, _filePath, _mode);
+                break;
+    }
 }

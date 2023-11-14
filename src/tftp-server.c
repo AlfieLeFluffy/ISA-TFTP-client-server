@@ -13,7 +13,42 @@
 
 #include "../include/common.h"
 #include "../include/parser.h"
-#include "../include/packet-stuct.h"
+
+#include "../include/error_code_msg.h"
+
+#include "../include/request_pack.h"
+#include "../include/error_pack.h"
+
+
+
+int handle_TFTP_request(int _opcode, char* _filePath, char* _mode){
+        if(_opcode != 1 && _opcode != 2){
+                fprintf(stdout, "ERROR: opcode for request does not match possible opcodes\n");
+                return 4;
+        }
+
+        switch(_opcode){
+                case 1:
+                        if (access(_filePath, F_OK) != 0) return 1;
+                        break;
+                case 2:
+                        break;
+                default:
+                        fprintf(stdout, "ERROR: Internal error\n");
+                        return 1;
+                        break;
+        }
+}
+
+char* create_file_path(char* _filename, char* _folderPath){
+        char* filePath = (char*)malloc(sizeof(_filename)+sizeof(_folderPath)+2);
+        
+        strcat(filePath, _folderPath);
+        if(_filename[0] != '/') strcat(filePath, "/");
+        strcat(filePath, _filename);
+        strcat(filePath, "\0");
+        return filePath;
+}
 
 
 #define MAXLINE 1000
@@ -65,6 +100,7 @@ int main(int argc, char *argv[])
         
         int listenfd, len, requestNum;
         struct sockaddr_in servaddr, cliaddr;
+
         bzero(&servaddr, sizeof(servaddr));
         requestNum = 0;
 
@@ -90,17 +126,32 @@ int main(int argc, char *argv[])
 
                         struct sockaddr_in *sin = (struct sockaddr_in *)&cliaddr;
 
-                        // write out the request buffer
+                        //      write out the request buffer
                         /*for (int i = 0; i< n; i++){
                                 printf("%d ", buffer[i]);
                         }
                         fprintf(stdout, "\n");*/
 
                         char filename[n];
+                        bzero(&filename, sizeof(filename));
                         char mode[50];
+                        bzero(&mode, sizeof(mode));
                         int opcode = RRQ_WRQ_packet_read(buffer, filename, mode);
+                        char* filePath = create_file_path(filename, folderPath);
 
-                        fprintf(stdout, "%d. Incoming request from '%s:%d' of OPCODE: '%d' on a file: '%s' in mode '%s'\n", requestNum, inet_ntoa(sin->sin_addr), sin->sin_port, opcode, filename, mode);
+                        RRQ_WRQ_request_write(opcode, sin, filePath, mode);
+
+                        
+                        int errorCode;
+                        if(errorCode = handle_TFTP_request(opcode, filePath, mode)){
+                                int sizeOfPacket;
+                                char* errorPacket = ERR_packet_create(&sizeOfPacket, errorCode, errorMessage[errorCode]);
+                                sendto(listenfd, errorPacket, sizeOfPacket, 0,(struct sockaddr*)&cliaddr, sizeof(cliaddr));
+                                fprintf(stdout, "%d. ERROR: handling a TFTP request, error code:%d\n", requestNum, errorCode);
+                                return -1;
+                        }
+
+                        
 
 
                                 
