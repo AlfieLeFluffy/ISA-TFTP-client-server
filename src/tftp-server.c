@@ -14,10 +14,10 @@
 #include "../include/common.h"
 #include "../include/parser.h"
 
-#include "../include/error_code_msg.h"
-
 #include "../include/request_pack.h"
 #include "../include/error_pack.h"
+#include "../include/ack_pack.h"
+#include "../include/data_pack.h"
 
 
 
@@ -32,14 +32,18 @@ int handle_TFTP_request(int _opcode, char* _filePath, char* _mode){
                         if (access(_filePath, F_OK) != 0) return 1;
                         break;
                 case 2:
+                        if (access(_filePath, F_OK) == 0) return 6;
                         break;
                 default:
                         fprintf(stdout, "ERROR: Internal error\n");
                         return 1;
                         break;
         }
+        return 0;
 }
 
+///Joins incoming filename with default filefolder to create filepath
+///Parameters are a char array of incoming filename and a char array of the default folderpath
 char* create_file_path(char* _filename, char* _folderPath){
         char* filePath = (char*)malloc(sizeof(_filename)+sizeof(_folderPath)+2);
         
@@ -50,8 +54,32 @@ char* create_file_path(char* _filename, char* _folderPath){
         return filePath;
 }
 
+int RRQ_fufill(int _listenfd, struct sockaddr_in* _servaddr, struct sockaddr_in* _cliaddr, char* filePath, char* _mode){
+        int sizeofPacket, blockID;
 
-#define MAXLINE 1000
+        blockID = 0;
+
+
+        /*char* ackPacket = ACK_packet_create(&sizeOfPacket, blockID);
+        sendto(listenfd, ackPacket, sizeOfPacket, 0,(struct sockaddr*)&cliaddr, sizeof(cliaddr));
+        ACK_message_write(inet_ntoa(servaddr.sin_addr),servaddr.sin_port, blockID);
+        free(ackPacket);*/
+
+        return 0;
+}
+
+int WRQ_fufill(int _listenfd, struct sockaddr_in* _servaddr, struct sockaddr_in* _cliaddr, char* filePath, char* _mode){
+        int sizeofPacket, blockID;
+
+        blockID = 0;
+
+        /*char* ackPacket = ACK_packet_create(&sizeOfPacket, blockID);
+        sendto(listenfd, ackPacket, sizeOfPacket, 0,(struct sockaddr*)&cliaddr, sizeof(cliaddr));
+        ACK_message_write(inet_ntoa(servaddr.sin_addr),servaddr.sin_port, blockID);
+        free(ackPacket);*/
+
+        return 0;
+}
   
 int main(int argc, char *argv[]) 
 {
@@ -61,7 +89,7 @@ int main(int argc, char *argv[])
         char* folderPath;
         opterr = 0;
 
-
+        
         while ((c = getopt (argc, argv, "p:")) != -1)
                 switch (c){
                         case 'p':
@@ -124,7 +152,7 @@ int main(int argc, char *argv[])
                 
                 while(!fork()){
 
-                        struct sockaddr_in *sin = (struct sockaddr_in *)&cliaddr;
+                        struct sockaddr_in *clientaddr_in = (struct sockaddr_in *)&cliaddr;
 
                         //      write out the request buffer
                         /*for (int i = 0; i< n; i++){
@@ -132,35 +160,38 @@ int main(int argc, char *argv[])
                         }
                         fprintf(stdout, "\n");*/
 
+                        int sizeOfPacket;
                         char filename[n];
                         bzero(&filename, sizeof(filename));
                         char mode[50];
                         bzero(&mode, sizeof(mode));
                         int opcode = RRQ_WRQ_packet_read(buffer, filename, mode);
-                        char* filePath = create_file_path(filename, folderPath);
 
-                        RRQ_WRQ_request_write(opcode, sin, filePath, mode);
-
-                        
-                        int errorCode;
-                        if(errorCode = handle_TFTP_request(opcode, filePath, mode)){
-                                int sizeOfPacket;
-                                char* errorPacket = ERR_packet_create(&sizeOfPacket, errorCode, errorMessage[errorCode]);
-                                sendto(listenfd, errorPacket, sizeOfPacket, 0,(struct sockaddr*)&cliaddr, sizeof(cliaddr));
-                                fprintf(stdout, "%d. ERROR: handling a TFTP request, error code:%d\n", requestNum, errorCode);
+                        if(opcode == -1){
+                                ERR_packet_send(listenfd, &servaddr, &cliaddr, 4);
                                 return -1;
                         }
 
+
+                        char* filePath = create_file_path(filename, folderPath);
+                        RRQ_WRQ_request_write(opcode, clientaddr_in, filePath, mode);
                         
+                        
+                        int errorCode;
+                        if(errorCode = handle_TFTP_request(opcode, filePath, mode)){
+                                ERR_packet_send(listenfd, &servaddr,&cliaddr,errorCode);
+                                return -1;
+                        }
 
+                        switch(opcode){
+                                case 1:
+                                        RRQ_fufill(listenfd, &servaddr, &cliaddr, filePath, mode);
+                                        break;
+                                case 2:
+                                        WRQ_fufill(listenfd, &servaddr, &cliaddr, filePath, mode);
+                                        break;
+                        }
 
-                                
-                        // send the response
-                        char *message = "Hello Client\0";
-                        sendto(listenfd, message, strlen(message), 0,
-                                (struct sockaddr*)&cliaddr, sizeof(cliaddr));
-
-                        return 0;
                 }
         }
         return 0;

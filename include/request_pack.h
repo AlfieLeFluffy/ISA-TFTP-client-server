@@ -34,37 +34,34 @@ char* RRQ_WRQ_packet_create(int* _returnSize,int _opcode, char* _filename, char*
     return packet;
 }
 
-int RRQ_WRQ_packet_read(char* packet, char* _filename, char* _mode){
-    if(packet[1] != 1 && packet[1] != 2){
-        fprintf(stdout, "Client send an incorrect OPCODE of %d\n", packet[1]);
+int RRQ_WRQ_packet_read(char* _packet, char* _filename, char* _mode){
+    if(_packet[1] != 1 && _packet[1] != 2){
+        fprintf(stdout, "ERROR: Client send an incorrect OPCODE of %d\n", _packet[1]);
         return -1;
     }
-    else{
-        int index = 2;
-        
-        while (packet[index] != 0){
-            char charStr[2];
-            charStr [0] = packet[index];
-            charStr[1] = '\0';
-            strcat(_filename, charStr);
-            index++;
-        }
-        strcat(_filename, "\0");
-
+    int index = 2;
+    
+    while (_packet[index] != 0){
+        char charStr[2];
+        charStr [0] = _packet[index];
+        charStr[1] = '\0';
+        strcat(_filename, charStr);
         index++;
-
-        while(packet[index] != 0){
-            char charStr[2];
-            charStr [0] = packet[index];
-            charStr[1] = '\0';
-            strcat(_mode, charStr);
-            index++;
-        }
-        strcat(_mode, "\0");
-
-        return (int)packet[1];
     }
-    return -1;
+    strcat(_filename, "\0");
+
+    index++;
+
+    while(_packet[index] != 0){
+        char charStr[2];
+        charStr [0] = _packet[index];
+        charStr[1] = '\0';
+        strcat(_mode, charStr);
+        index++;
+    }
+    strcat(_mode, "\0");
+
+    return (int)_packet[1];
 }
 
 void RRQ_WRQ_request_write(int _opcode, struct sockaddr_in* _sin, char* _filePath, char* _mode){
