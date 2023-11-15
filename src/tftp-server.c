@@ -54,7 +54,7 @@ char* create_file_path(char* _filename, char* _folderPath){
         return filePath;
 }
 
-int RRQ_fufill(int _listenfd, struct sockaddr_in* _servaddr, struct sockaddr_in* _cliaddr, char* filePath, char* _mode){
+int RRQ_fufill(int _listenfd, struct sockaddr_in* _servaddr, struct sockaddr_in* _cliaddr, int _cliaddrSize, char* filePath, char* _mode){
         int sizeofPacket, blockID;
 
         blockID = 0;
@@ -68,7 +68,7 @@ int RRQ_fufill(int _listenfd, struct sockaddr_in* _servaddr, struct sockaddr_in*
         return 0;
 }
 
-int WRQ_fufill(int _listenfd, struct sockaddr_in* _servaddr, struct sockaddr_in* _cliaddr, char* filePath, char* _mode){
+int WRQ_fufill(int _listenfd, struct sockaddr_in* _servaddr, struct sockaddr_in* _cliaddr, int _cliaddrSize, char* filePath, char* _mode){
         int sizeofPacket, blockID;
 
         blockID = 0;
@@ -127,7 +127,7 @@ int main(int argc, char *argv[])
 
         
         int listenfd, len, requestNum;
-        struct sockaddr_in servaddr, cliaddr;
+        struct sockaddr_in servaddr,  cliaddr;
 
         bzero(&servaddr, sizeof(servaddr));
         requestNum = 0;
@@ -168,7 +168,7 @@ int main(int argc, char *argv[])
                         int opcode = RRQ_WRQ_packet_read(buffer, filename, mode);
 
                         if(opcode == -1){
-                                ERR_packet_send(listenfd, &servaddr, &cliaddr, 4);
+                                ERR_packet_send(listenfd, &servaddr, &cliaddr, sizeof(cliaddr), 4);
                                 return -1;
                         }
 
@@ -179,16 +179,16 @@ int main(int argc, char *argv[])
                         
                         int errorCode;
                         if(errorCode = handle_TFTP_request(opcode, filePath, mode)){
-                                ERR_packet_send(listenfd, &servaddr,&cliaddr,errorCode);
+                                ERR_packet_send(listenfd, &servaddr,&cliaddr, sizeof(cliaddr),errorCode);
                                 return -1;
                         }
 
                         switch(opcode){
                                 case 1:
-                                        RRQ_fufill(listenfd, &servaddr, &cliaddr, filePath, mode);
+                                        RRQ_fufill(listenfd, &servaddr, &cliaddr, sizeof(clieaddr), filePath, mode);
                                         break;
                                 case 2:
-                                        WRQ_fufill(listenfd, &servaddr, &cliaddr, filePath, mode);
+                                        WRQ_fufill(listenfd, &servaddr, &cliaddr, sizeof(clieaddr), filePath, mode);
                                         break;
                         }
 
