@@ -1,4 +1,0 @@
-#define HEADER_SIZE 8
-#define PACKET_SIZE 1024
-
-
