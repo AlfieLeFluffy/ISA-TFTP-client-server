@@ -78,15 +78,15 @@ int OACK_packet_read(char* _packet, int _packetLenght, int* _blockSize, int* _ti
 
         *option = tolower(*option);
         if(!strcmp(option, "blocksize")){
-            *_blockSize = (int)(((int)_packet[index]) << 8) | _packet[index+1];
+            *_blockSize = (unsigned char)_packet[index] << 8 | (unsigned char) _packet[index+1];
             index += 3;
         }
         else if(!strcmp(option, "timeout")){
-            *_timeout = (int)_packet[index];
+            *_timeout = (unsigned char)_packet[index];
             index += 2;
         }
         else if (!strcmp(option, "tsize")){
-            *_tsize = (int)(((int)_packet[index]) << 8) | _packet[index+1];
+            *_tsize = (unsigned char)_packet[index] << 8 | (unsigned char) _packet[index+1];
             index += 3;
         }
         else{

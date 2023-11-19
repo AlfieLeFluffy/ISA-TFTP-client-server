@@ -2,7 +2,7 @@ int send_file(int _listenfd, struct sockaddr_in* _servaddr, struct sockaddr_in* 
         int sizeOfPacket, sizeOfData, blockID, endOfFile, lastACK, indexInFile;
         FILE *targetFile;
         char* dataPacket;
-        //char buffer[_blockSize];
+        char buffer[4+_blockSize];
 
         blockID = 0;
         sizeOfData = _blockSize;
@@ -23,12 +23,12 @@ int send_file(int _listenfd, struct sockaddr_in* _servaddr, struct sockaddr_in* 
                 if(sendto(_listenfd, dataPacket, sizeOfPacket, 0,(struct sockaddr*)_cliaddr, _len) < 0){
                         fprintf(stdout, "ERROR: DATA, failed to send, errno %d \n", errno);
                 }
-                printf("size %d\n", sizeOfPacket);
                 free(data);
                 free(dataPacket);
                 blockID++;
 
-                //int n = recvfrom(_listenfd, buffer, sizeof(buffer),0, (struct sockaddr*)&_servaddr,&_len);
+                int n = recvfrom(_listenfd, buffer, sizeof(buffer),0, (struct sockaddr*)&_servaddr,&_len);
+                printf("test timeout %d", n);
         }
         
 

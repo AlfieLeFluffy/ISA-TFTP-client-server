@@ -11,6 +11,7 @@
 #include <string.h>
 #include <netdb.h>
 #include <errno.h>
+#include <sys/statvfs.h>
 
 #include "../include/common.c"
 #include "../include/parser.c"
@@ -45,6 +46,54 @@ char* resolve_hostname(char* _result,char* _hostname){
     return inet_ntoa(((struct sockaddr_in *)result->ai_addr)->sin_addr);
 }
 
+int handle_options_send(char* _filepath, int* _blockSize, int* _timeout, int* _tsize){
+        FILE* testfile;
+
+        // Find size of file
+        testfile = fopen(_filepath, "r");
+        if (testfile == NULL) { 
+                printf("ERROR: Could not open file: option send\n"); 
+                return 1; 
+        } 
+        fseek(testfile, 0L, SEEK_END); 
+        long int size = ftell(testfile); 
+        fclose(testfile); 
+
+        // Set blocksize for better file transfer dependent on size
+        if(size>65500){
+                *_blockSize=65500;
+        }
+        else{
+                *_blockSize = 512 * (size%512);
+        }
+
+        // Check timeout
+        if(0>*_timeout>256)*_timeout=1;
+
+        // Set tsize to filesize
+        *_tsize = size;
+                        
+        return 0;
+}
+
+int handle_options_recieve(int _blockSize, int _timeout, int _tsize){
+        // Check if blocksize is not outside allowed parameters
+        if(512>_blockSize>65500)return 8;
+
+        // Check timeout
+        if(0>_timeout>256) return 1;
+
+        // Set tsize to filesize
+        struct statvfs diskScanData;
+        if((statvfs(".",&diskScanData)) < 0 ) {
+                return 1;
+        }
+
+        if(_tsize>diskScanData.f_bfree){
+                return 3;
+        }
+    return 0;
+}
   
 
 int main(int argc, char *argv[]) 
@@ -138,6 +187,7 @@ int main(int argc, char *argv[])
     // Definition of variables used
     char buffer[512];
     int sockfd, n, sizeOfPacket, opcode, blockID, errorCode;
+    unsigned int blockSize,timeout, tsize;
     char* requestPacket;
     char* filePath;
     struct sockaddr_in servaddr, cliaddr;
@@ -226,6 +276,24 @@ int main(int argc, char *argv[])
             error_exit_FD(errorCode, sockfd);
             break;
         case 6:
+            errorCode = OACK_packet_read(buffer,n,&blockSize,&timeout,&tsize);
+            if(errorCode){
+                fprintf(stdout, "ERROR: handling OACK responce: %d\n", errorCode);
+                close(sockfd);
+                exit(1);
+            }
+            OACK_message_write(inet_ntoa(servaddr.sin_addr),servaddr.sin_port,blockSize,timeout,tsize);
+            errorCode = handle_options_recieve(blockSize, timeout, tsize);
+            if(errorCode == 1){
+                fprintf(stdout, "ERROR: handling OACK responce: unable to process request\n");
+                close(sockfd);
+                exit(1);
+            }
+            else if(errorCode == 3){
+                fprintf(stdout, "ERROR: handling OACK responce: not enough available disk space\n");
+                close(sockfd);
+                exit(1);
+            }
             break;
         default:
             fprintf(stdout, "ERROR: internal error (wrong answer OPCODE)\n");

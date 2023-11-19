@@ -131,16 +131,31 @@ int RRQ_WRQ_packet_read(char* _packet, int _packetLenght, char* _filename, char*
 
         *option = tolower(*option);
         if(!strcmp(option, "blocksize")){
-            *_blockSize = (int)(((int)_packet[index]) << 8) | _packet[index+1];
+            *_blockSize = (unsigned char)_packet[index] << 8 | (unsigned char) _packet[index+1];
             index += 3;
         }
         else if(!strcmp(option, "timeout")){
-            *_timeout = (int)_packet[index];
+            *_timeout = (unsigned int)_packet[index];
             index += 2;
         }
         else if (!strcmp(option, "tsize")){
-            *_tsize = (int)(((int)_packet[index]) << 8) | _packet[index+1];
-            index += 3;
+            /*unsigned char helpCharArray[8];
+            long unsigned int helpInt = 0;
+            int helpCounter = 0;
+            index++;
+
+            while(_packet[index] != '\0'){
+                helpCharArray[helpCounter] = _packet[index];
+                helpCounter++;
+                index++;   
+            }
+
+            for(int i = 0; i<helpCounter; i++){
+                helpInt += helpCharArray[i]*scale(helpCounter-i-1);
+            }*/
+
+            *_tsize = *_blockSize = (unsigned char)_packet[index] << 8 | (unsigned char) _packet[index+1];//helpInt;
+            index += 2; //8-helpCounter;
         }
         else{
             return -8;
