@@ -1,13 +1,19 @@
-char* DATA_packet_create(int* _returnSize, int _blockID, char* _data) { 
-    size_t sizeOfPacket = 4+sizeof(_data);
-    char* packet = (char *) malloc(sizeOfPacket);
+char* DATA_packet_create(int* _returnSize, int _blockID, char* _data, int _sizeOfData) { 
+    int sizeOfPacket = 4+_sizeOfData;
+
+    char* packet = (char *) malloc(sizeOfPacket*sizeof(char));
+
 
     packet[0] = '\0';
     packet[1] = 3;
 
-    packet[2]=_blockID; 
+    packet[3]=_blockID; 
     _blockID = _blockID>>8; 
-    packet[3]=_blockID;
+    packet[2]=_blockID;
+
+    for(int i = 4; i< _sizeOfData+4;i++){
+        packet[i]=_data[i-4];
+    }
     
 
     *_returnSize = sizeOfPacket;
@@ -16,7 +22,7 @@ char* DATA_packet_create(int* _returnSize, int _blockID, char* _data) {
 
 int DATA_packet_read(char* _packet, char* _filename, char* _mode){
     if(_packet[1] != 4){
-        fprintf(stdout, "ERROR: internal error (wrong opcode in error_packet_read)");
+        fprintf(stdout, "ERROR: internal error (wrong opcode in DATA_packet_read)");
         return -1;
     }
 

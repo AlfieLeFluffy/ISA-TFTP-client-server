@@ -12,5 +12,10 @@ void error_exit_FD(int error_type,int sockfd){
     exit(error_type);
 }
 
+void append_char(char* s, char c) {
+        int len = strlen(s);
+        s[len] = c;
+}
+
 
 

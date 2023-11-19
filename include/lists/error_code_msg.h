@@ -10,5 +10,6 @@ char* errorMessage[] = {
     "Illegal TFTP operation.",
     "Unknown transfer ID.",
     "File already exists.",
-    "No such user."
+    "No such user.",
+    "Wrong options format"
 };

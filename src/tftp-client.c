@@ -10,14 +10,21 @@
 #include <stdlib.h>
 #include <string.h>
 #include <netdb.h>
+#include <errno.h>
 
-#include "../include/common.h"
-#include "../include/parser.h"
+#include "../include/common.c"
+#include "../include/parser.c"
 
-#include "../include/request_pack.h"
-#include "../include/error_pack.h"
-#include "../include/ack_pack.h"
-#include "../include/data_pack.h"
+#include "../include/packets/request_pack.c"
+#include "../include/packets/ack_pack.c"
+#include "../include/packets/oack_pack.c"
+#include "../include/packets/data_pack.c"
+#include "../include/packets/error_pack.c"
+
+
+#include "../include/read_write_file.c"
+#include "../include/send_file.c"
+#include "../include/recieve_file.c"
 
 #define MAXLINE 1000
 
@@ -75,7 +82,7 @@ int main(int argc, char *argv[])
                 filePathDownload = optarg;
                 break;
             case 't':
-                fileTargetPath = optarg;
+                fileTargetPath = parseInputFilePath(optarg);
                 break;
             case '?':
                 if (isprint (optopt)){
@@ -102,8 +109,8 @@ int main(int argc, char *argv[])
         exit(1);
     }
     else if (optind < argc){
-        filePathUpload = parseFilePath(argv[optind]);
-    }
+        filePathUpload = parseOutputFilePath(argv[optind]);
+    }                       
 
     if (filePathDownload != NULL && filePathUpload != NULL){
         fprintf(stdout, "Can't both download and upload in the same command\n");
@@ -115,9 +122,7 @@ int main(int argc, char *argv[])
         exit(1);
     }
 
-    /*
-        Checks if ip address is valid and tries to resolve for hostname if not
-    */
+    // Checks if ip address is valid and tries to resolve for hostname if not
     if(!check_ip_valid(ip)){
         ip = resolve_hostname(ip,ip);
         if(ip == "\0")exit(1);
@@ -129,63 +134,80 @@ int main(int argc, char *argv[])
     ///
     ///     START OF PROGRAM LOGIC
 
-    ///     SETUP OF SOCKETS AND TARGER SOCKADDR
-    // definition of variables used
-    char buffer[100];
-    char *message = "\0";
-    int sockfd, n;
-    struct sockaddr_in servaddr, clientaddr;
+
+    // Definition of variables used
+    char buffer[512];
+    int sockfd, n, sizeOfPacket, opcode, blockID, errorCode;
+    char* requestPacket;
+    char* filePath;
+    struct sockaddr_in servaddr, cliaddr;
+    struct timeval timeout_struct;
         
-    // clear servaddr
+    // Clear and set server servaddr
     bzero(&servaddr, sizeof(servaddr));
     servaddr.sin_addr.s_addr = inet_addr(ip);
     servaddr.sin_port = htons(port);
     servaddr.sin_family = AF_INET;
 
-    bzero(&clientaddr, sizeof(clientaddr));
+    // Clear and set client cliaddr
+    bzero(&cliaddr, sizeof(cliaddr));
     sockfd = socket(AF_INET, SOCK_DGRAM, 0);        
-    clientaddr.sin_addr.s_addr = htonl(INADDR_ANY);
-    clientaddr.sin_port = htons(port-1);
-    clientaddr.sin_family = AF_INET; 
+    cliaddr.sin_addr.s_addr = htonl(INADDR_ANY);
+    cliaddr.sin_port = htons(2048);
+    cliaddr.sin_family = AF_INET; 
 
-    // bind client address to socket descriptor
-    if(bind(sockfd, (struct sockaddr*)&clientaddr, sizeof(clientaddr))){
-            fprintf(stdout, "ERROR : creating socket, could not bind\n");
+    // Bind client address to socket descriptor
+    while (bind(sockfd, (struct sockaddr*)&cliaddr, sizeof(cliaddr))){
+        if(cliaddr.sin_port >= 65535){
+            printf("ERROR : could not bind socket \n");
             exit(1);
+        }
+        cliaddr.sin_port = htons(cliaddr.sin_port +1);
     }
+
+    // Set socket timeout  
+    timeout_struct.tv_sec = 3;
+    timeout_struct.tv_usec = 0;
+    if (setsockopt (sockfd, SOL_SOCKET, SO_RCVTIMEO, &timeout_struct,sizeof timeout_struct) < 0) fprintf(stdout,"ERROR : setsocketopt failed, timeout \n");
     
-    // connect to server
+    
+    // Connect to server
     while(connect(sockfd, (struct sockaddr *)&servaddr, sizeof(servaddr)) < 0)
     {
         printf("ERROR : connect Failed \n");
         error_exit_FD(1, sockfd);
     }
 
-    /// CREATING AND SENDING OF RRQ/WRQ PACKET
-    int sizeOfPacket, opcode;
-    char* requestPacket;
-    char* filePath;
-
+    // Create packet dependent on which opetation is required 
     if (filePathDownload != NULL){
-        requestPacket = RRQ_WRQ_packet_create(&sizeOfPacket,1,filePathDownload,"netascii");
         opcode = 1;
+        requestPacket = RRQ_WRQ_packet_create(&sizeOfPacket,1,filePathDownload,"netascii",65536,1,0);
         filePath = filePathDownload;
     }
     else{
-        requestPacket = RRQ_WRQ_packet_create(&sizeOfPacket,2,fileTargetPath,"netascii");
         opcode = 2;
+        requestPacket = RRQ_WRQ_packet_create(&sizeOfPacket,2,fileTargetPath,"netascii",256,1,0);
         filePath = filePathUpload;
     }
-
-    // request to send datagram
-    // no need to specify server address in sendto
-    // connect stores the peers IP and port
     sendto(sockfd, requestPacket, sizeOfPacket, 0, (struct sockaddr*)NULL, sizeof(servaddr));
-    RRQ_WRQ_request_write(opcode, &clientaddr, filePath, "netascii");
     free(requestPacket);
-        
-    /// WAITING FOR SERVER RESPONSE AND PARSING IT
-    //receive message from server
+    close(sockfd);
+
+    // Reset cliaddr for inversed comunication
+    bzero(&cliaddr, sizeof(cliaddr));
+    sockfd = socket(AF_INET, SOCK_DGRAM, 0);        
+    cliaddr.sin_addr.s_addr = htonl(INADDR_ANY);
+    cliaddr.sin_port = htons(2048);
+    cliaddr.sin_family = AF_INET; 
+
+    // Bind client address to socket descriptor
+    while (bind(sockfd, (struct sockaddr*)&cliaddr, sizeof(cliaddr))){
+        printf("ERROR : could not bind socket \n");
+        exit(1);
+    }
+    
+
+    // Receive responce from server
     int len = sizeof(servaddr);
     n = recvfrom(sockfd, buffer, sizeof(buffer),0, (struct sockaddr*)&servaddr,&len); 
 
@@ -195,12 +217,12 @@ int main(int argc, char *argv[])
     
     switch (buffer[1]){
         case 4:
-            int blockID = ACK_packet_read(buffer);
+            blockID = ACK_packet_read(buffer);
             ACK_message_write(inet_ntoa(servaddr.sin_addr),servaddr.sin_port, blockID);
             break;
         case 5:
-            int errorCode = ERR_packet_read(buffer, errorMessage);
-            ERR_message_write(inet_ntoa(servaddr.sin_addr),servaddr.sin_port, clientaddr.sin_port,errorCode,errorMessage);
+            errorCode = ERR_packet_read(buffer, errorMessage);
+            ERR_message_write(inet_ntoa(servaddr.sin_addr),servaddr.sin_port, cliaddr.sin_port,errorCode,errorMessage);
             error_exit_FD(errorCode, sockfd);
             break;
         case 6:
@@ -212,6 +234,6 @@ int main(int argc, char *argv[])
     }
 
 
-    // close the descriptor on succesful end
+    // Close the descriptor on succesful end
     close(sockfd);
 }

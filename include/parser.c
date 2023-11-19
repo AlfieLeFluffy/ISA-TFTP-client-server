@@ -15,8 +15,15 @@ char* parseFolderPath(char* _folderPath){
     return _folderPath;
 }
 
-char* parseFilePath(char* _filePath){
+char* parseOutputFilePath(char* _filePath){
     if (access(_filePath, F_OK) == 0) return _filePath;
     fprintf(stdout, "Selected file path is not accesable or doesn't exist: %s\n", _filePath);
+    exit(1);
+}
+
+
+char* parseInputFilePath(char* _filePath){
+    if (access(_filePath, F_OK) != 0) return _filePath;
+    fprintf(stdout, "Selected file already exists, can't rewrite: %s\n", _filePath);
     exit(1);
 }

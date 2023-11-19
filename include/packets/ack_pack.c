@@ -25,3 +25,12 @@ int ACK_packet_read(char* _packet){
 void ACK_message_write(char* _ip, int _sourcePort, int _blockID){
     fprintf(stderr, "ACK %s:%d: %d \n",_ip, _sourcePort, _blockID);
 }
+
+void ACK_packet_send(int _listenfd, struct sockaddr_in* _servaddr, struct sockaddr_in* _cliaddr, int _cliaddrSize, int _blockID){
+    int sizeOfPacket;
+    char* ackPacket = ACK_packet_create(&sizeOfPacket, _blockID);
+    if(sendto(_listenfd, ackPacket, sizeOfPacket, 0,(struct sockaddr*)_cliaddr, _cliaddrSize) == -1){
+        fprintf(stdout, "ERROR: ERROR packet, errno %d \n", errno);
+    }
+    free(ackPacket);
+}

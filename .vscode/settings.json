@@ -2,6 +2,10 @@
     "C_Cpp.errorSquiggles": "disabled",
     "files.associations": {
         "error_code_msg.h": "c",
-        "error_pack.h": "c"
+        "error_pack.h": "c",
+        "data_pack.h": "c",
+        "ack_pack.h": "c",
+        "request_pack.h": "c",
+        "parser.h": "c"
     }
 }
