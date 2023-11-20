@@ -69,7 +69,7 @@ char* OACK_packet_create(int* _returnSize, int _blockSize, int _timeout, int _ts
     return packet;
 }
 
-int OACK_packet_read(char* _packet, int _packetLenght, int* _blockSize, int* _timeout, int* _tsize){
+int OACK_packet_read(char* _packet, int _packetLenght,unsigned int* _blockSize, unsigned int* _timeout, unsigned int* _tsize){
     if(_packet[1] != 6){
         fprintf(stdout, "ERROR: internal error (wrong opcode in error_packet_read)");
         return -1;

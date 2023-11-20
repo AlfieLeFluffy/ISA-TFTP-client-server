@@ -53,7 +53,7 @@ char* resolve_hostname(char* _result,char* _hostname){
     return inet_ntoa(((struct sockaddr_in *)result->ai_addr)->sin_addr);
 }
 
-int handle_options_send(char* _filepath, int* _blockSize, int* _timeout, int* _tsize){
+int handle_options_send(char* _filepath, unsigned int* _blockSize, unsigned int* _timeout, unsigned int* _tsize){
         FILE* testfile;
 
         // Find size of file
@@ -65,6 +65,11 @@ int handle_options_send(char* _filepath, int* _blockSize, int* _timeout, int* _t
         fseek(testfile, 0L, SEEK_END); 
         long int size = ftell(testfile); 
         fclose(testfile); 
+
+        if( size > 17196646400){
+            printf("ERROR: File too big to be send over TFTP\n"); 
+            return 1;
+        }
 
         // Set blocksize for better file transfer dependent on size
         if(size > 65500){
@@ -78,7 +83,7 @@ int handle_options_send(char* _filepath, int* _blockSize, int* _timeout, int* _t
         }
 
         // Check timeout
-        if(0>*_timeout>256)*_timeout=1;
+        if(0>*_timeout || *_timeout>256)*_timeout=1;
 
         // Set tsize to filesize
         *_tsize = size;
@@ -88,10 +93,10 @@ int handle_options_send(char* _filepath, int* _blockSize, int* _timeout, int* _t
 
 int handle_options_recieve(int _blockSize, int _timeout, int _tsize){
         // Check if blocksize is not outside allowed parameters
-        if(512>_blockSize>65500)return 8;
+        if(512>_blockSize || _blockSize>65500)return 8;
 
         // Check timeout
-        if(0>_timeout>256) return 1;
+        if(0>_timeout || _timeout>256) return 1;
 
         // Set tsize to filesize
         struct statvfs diskScanData;
@@ -118,7 +123,6 @@ int main(int argc, char *argv[])
     char *filePathDownload = NULL;
     char *filePathUpload = NULL;
     char *fileTargetPath = NULL;
-    int index;
     int c;
     opterr = 0;
 
@@ -188,7 +192,7 @@ int main(int argc, char *argv[])
     // Checks if ip address is valid and tries to resolve for hostname if not
     if(!check_ip_valid(ip)){
         ip = resolve_hostname(ip,ip);
-        if(ip == "\0")exit(1);
+        if(strcmp(ip, "\0"))exit(1);
     }
 
     ///     END OF PARAM PARSE AND CHECK
@@ -200,8 +204,8 @@ int main(int argc, char *argv[])
 
     // Definition of variables used
     char buffer[512];
-    int sockfd, n, sizeOfPacket, opcode, blockID, errorCode;
-    unsigned int blockSize,timeout, tsize;
+    int sockfd, sizeOfPacket, opcode, blockID, errorCode;
+    unsigned int n, blockSize, timeout, tsize;
     char* requestPacket;
     char* filePath;
     char* mode;
@@ -293,7 +297,7 @@ int main(int argc, char *argv[])
     
 
     // Receive responce from server
-    int len = sizeof(servaddr);
+    unsigned int len = sizeof(servaddr);
     n = recvfrom(sockfd, buffer, sizeof(buffer),0, (struct sockaddr*)&servaddr,&len); 
 
     if(n<0){

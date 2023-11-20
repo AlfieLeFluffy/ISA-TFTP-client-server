@@ -29,10 +29,6 @@ char* RRQ_WRQ_packet_create(int* _returnSize,int _opcode, char* _filename, char*
         fprintf (stdout, "Internal ERROR (wrong MODE)");
         exit(1);
     }
-    if(256>_blockSize>65536){
-        fprintf (stdout, "Internal ERROR (wrong BLOCKSIZE)");
-        exit(1);
-    }
     if(0>_timeout){
         fprintf (stdout, "Internal ERROR (wrong TIMEOUT)");
         exit(1);
@@ -112,7 +108,7 @@ char* RRQ_WRQ_packet_create(int* _returnSize,int _opcode, char* _filename, char*
     return packet;
 }
 
-int RRQ_WRQ_packet_read(char* _packet, int _packetLenght, char* _filename, char* _mode, int* _blockSize, int* _timeout, int* _tsize){
+int RRQ_WRQ_packet_read(char* _packet, int _packetLenght, char* _filename, char* _mode, unsigned int* _blockSize, unsigned int* _timeout, unsigned int* _tsize){
     char option[25];
 
     if(_packet[1] != 1 && _packet[1] != 2){

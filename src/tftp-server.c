@@ -57,7 +57,7 @@ int test_TFTP_request(int _opcode, char* _filePath, char* _mode){
         return 0;
 }
 
-int handle_options(int _opcode, char* _folderpath, char* _filepath, int* _blockSize, int* _timeout, int* _tsize){
+int handle_options(int _opcode, char* _folderpath, char* _filepath, unsigned int* _blockSize, unsigned int* _timeout, unsigned int* _tsize){
         FILE* testfile;
         switch(_opcode){
                 case 1:
@@ -71,6 +71,11 @@ int handle_options(int _opcode, char* _folderpath, char* _filepath, int* _blockS
                         long int size = ftell(testfile); 
                         fclose(testfile); 
 
+                        if( size > 17196646400){
+                                printf("ERROR: File too big to be send over TFTP\n"); 
+                                return 1;
+                        }
+
                         // Set blocksize for better file transfer dependent on size
                         if(size > 65500){
                                 *_blockSize=65500;
@@ -82,7 +87,7 @@ int handle_options(int _opcode, char* _folderpath, char* _filepath, int* _blockS
                         }
 
                         // Check timeout
-                        if(0>*_timeout>256)*_timeout=1;
+                        if(0>*_timeout || *_timeout>256)*_timeout=1;
 
                         // Set tsize to filesize
                         *_tsize = size;
@@ -128,7 +133,6 @@ char* create_file_path(char* _filename, char* _folderPath){
 int main(int argc, char *argv[]) 
 {
         int port = 69;
-        int index;
         int c;
         char* folderPath;
         opterr = 0;
@@ -170,7 +174,8 @@ int main(int argc, char *argv[])
         }       
 
         
-        int listenfd, len;
+        int listenfd;
+        unsigned int len;
         struct sockaddr_in servaddr,  cliaddr;
 
         bzero(&servaddr, sizeof(servaddr));
@@ -196,7 +201,8 @@ int main(int argc, char *argv[])
                 while(!fork()){
 
                         struct sockaddr_in *clientaddr_in = (struct sockaddr_in *)&cliaddr;
-                        int opcode, sizeOfPacket, blockID, blockSize, timeout, tsize, errorCode;
+                        int opcode, sizeOfPacket, blockID;
+                        unsigned int blockSize, timeout, tsize, errorCode;
                         char* filePath;
                         char filename[n], mode[50];
                         struct timeval timeout_struct; 
@@ -248,7 +254,8 @@ int main(int argc, char *argv[])
                                 close(listenfd);
                                 return -1;
                         }
-                        else if(errorCode = test_TFTP_request(opcode, filePath, mode)){
+                        errorCode = test_TFTP_request(opcode, filePath, mode);
+                        if(errorCode>0){
                                 ERR_packet_send(listenfd, &servaddr,&cliaddr, sizeof(cliaddr),errorCode);
                                 return -1;
                         }

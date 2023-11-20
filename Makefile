@@ -1,7 +1,7 @@
 # login: xvlach24
 
 CC=gcc
-CFLAGS=  #-Wall
+CFLAGS=  -Wall
 # -std=gnu99  -Wextra -Werror -pedantic -lrt -pthread
 
 all: tftp
