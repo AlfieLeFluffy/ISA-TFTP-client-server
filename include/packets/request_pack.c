@@ -155,7 +155,7 @@ int RRQ_WRQ_packet_read(char* _packet, int _packetLenght, char* _filename, char*
             }*/
 
             *_tsize = *_blockSize = (unsigned char)_packet[index] << 8 | (unsigned char) _packet[index+1];//helpInt;
-            index += 2; //8-helpCounter;
+            index += 3; //8-helpCounter;
         }
         else{
             return -8;

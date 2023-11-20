@@ -14,7 +14,7 @@ char* ACK_packet_create(int* _returnSize, short _blockID) {
 
 int ACK_packet_read(char* _packet){
     if(_packet[1] != 4){
-        fprintf(stdout, "ERROR: internal error (wrong opcode in error_packet_read)");
+        fprintf(stdout, "ERROR: internal error (wrong opcode in ack_packet_read)\n");
         return -1;
     }
     
@@ -23,7 +23,7 @@ int ACK_packet_read(char* _packet){
 }
 
 void ACK_message_write(char* _ip, int _sourcePort, int _blockID){
-    fprintf(stderr, "ACK %s:%d: %d \n",_ip, _sourcePort, _blockID);
+    fprintf(stderr, "ACK %s:%d %d \n",_ip, _sourcePort, _blockID);
 }
 
 void ACK_packet_send(int _listenfd, struct sockaddr_in* _servaddr, struct sockaddr_in* _cliaddr, int _cliaddrSize, int _blockID){

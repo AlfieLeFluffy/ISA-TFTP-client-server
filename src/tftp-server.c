@@ -186,7 +186,7 @@ int main(int argc, char *argv[])
                 while(!fork()){
 
                         struct sockaddr_in *clientaddr_in = (struct sockaddr_in *)&cliaddr;
-                        int opcode, sizeOfPacket, blockSize, timeout, tsize, errorCode;
+                        int opcode, sizeOfPacket, blockID, blockSize, timeout, tsize, errorCode;
                         char* filePath;
                         char filename[n], mode[50];
                         struct timeval timeout_struct; 
@@ -242,11 +242,18 @@ int main(int argc, char *argv[])
                         timeout_struct.tv_usec = 0;
                         if (setsockopt (listenfd, SOL_SOCKET, SO_RCVTIMEO, &timeout_struct,sizeof timeout_struct) < 0) fprintf(stdout,"ERROR : setsocketopt failed, timeout \n");        
 
-                        
+                        OACK_packet_send(listenfd,&servaddr,&cliaddr,sizeof cliaddr, blockSize,timeout,tsize);
 
                         // Switch and handle the file transfer 
                         switch(opcode){
                                 case 1:
+                                        int n = recvfrom(listenfd, buffer, sizeof(buffer),0, (struct sockaddr*)&cliaddr,&len);
+                                        if(ACK_packet_read(buffer) != 0){
+                                                ERR_packet_send(listenfd, &servaddr,&cliaddr,sizeof cliaddr,1);
+                                                close(listenfd);
+                                                exit(1);
+                                        }
+                                        ACK_message_write(inet_ntoa(clientaddr_in->sin_addr),clientaddr_in->sin_port,0);
                                         send_file(listenfd, &servaddr, &cliaddr, sizeof(cliaddr), filePath, mode, blockSize);
                                         break;
                                 case 2:

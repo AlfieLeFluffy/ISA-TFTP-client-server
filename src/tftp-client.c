@@ -27,7 +27,6 @@
 #include "../include/send_file.c"
 #include "../include/recieve_file.c"
 
-#define MAXLINE 1000
 
 int check_ip_valid(char* _ip){
     struct sockaddr_in sa;
@@ -131,7 +130,7 @@ int main(int argc, char *argv[])
                 filePathDownload = optarg;
                 break;
             case 't':
-                fileTargetPath = parseInputFilePath(optarg);
+                fileTargetPath = optarg;
                 break;
             case '?':
                 if (isprint (optopt)){
@@ -154,16 +153,20 @@ int main(int argc, char *argv[])
         Checks for argument input combinations
     */
     if(optind+1 < argc){
-        fprintf(stdout, "File path is in an incorrect format\n");
+        fprintf(stdout, "ERROR: File path is in an incorrect format\n");
         exit(1);
     }
     else if (optind < argc){
-        filePathUpload = parseOutputFilePath(argv[optind]);
+        filePathUpload = parseUploadFilePath(argv[optind]);
     }                       
 
     if (filePathDownload != NULL && filePathUpload != NULL){
-        fprintf(stdout, "Can't both download and upload in the same command\n");
+        fprintf(stdout, "ERROR: Can't both download and upload in the same command\n");
         exit(1);
+    }
+
+    if(filePathDownload != NULL){
+        fileTargetPath = parseFDownloadilePath(fileTargetPath);
     }
 
     if (ip == NULL){
@@ -190,6 +193,7 @@ int main(int argc, char *argv[])
     unsigned int blockSize,timeout, tsize;
     char* requestPacket;
     char* filePath;
+    char* mode;
     struct sockaddr_in servaddr, cliaddr;
     struct timeval timeout_struct;
         
@@ -229,14 +233,15 @@ int main(int argc, char *argv[])
     }
 
     // Create packet dependent on which opetation is required 
+    mode = "netascii";
     if (filePathDownload != NULL){
         opcode = 1;
-        requestPacket = RRQ_WRQ_packet_create(&sizeOfPacket,1,filePathDownload,"netascii",65536,1,0);
+        requestPacket = RRQ_WRQ_packet_create(&sizeOfPacket,1,filePathDownload,mode,65536,1,0);
         filePath = filePathDownload;
     }
     else{
         opcode = 2;
-        requestPacket = RRQ_WRQ_packet_create(&sizeOfPacket,2,fileTargetPath,"netascii",256,1,0);
+        requestPacket = RRQ_WRQ_packet_create(&sizeOfPacket,2,fileTargetPath,mode,256,1,0);
         filePath = filePathUpload;
     }
     sendto(sockfd, requestPacket, sizeOfPacket, 0, (struct sockaddr*)NULL, sizeof(servaddr));
@@ -261,7 +266,6 @@ int main(int argc, char *argv[])
     int len = sizeof(servaddr);
     n = recvfrom(sockfd, buffer, sizeof(buffer),0, (struct sockaddr*)&servaddr,&len); 
 
-
     char errorMessage[sizeof(buffer)];
     bzero(&errorMessage, sizeof(errorMessage));
     
@@ -282,7 +286,7 @@ int main(int argc, char *argv[])
                 close(sockfd);
                 exit(1);
             }
-            OACK_message_write(inet_ntoa(servaddr.sin_addr),servaddr.sin_port,blockSize,timeout,tsize);
+            OACK_message_write(inet_ntoa(servaddr.sin_addr),ntohs(servaddr.sin_port),blockSize,timeout,tsize);
             errorCode = handle_options_recieve(blockSize, timeout, tsize);
             if(errorCode == 1){
                 fprintf(stdout, "ERROR: handling OACK responce: unable to process request\n");
@@ -299,6 +303,19 @@ int main(int argc, char *argv[])
             fprintf(stdout, "ERROR: internal error (wrong answer OPCODE)\n");
             error_exit_FD(1,sockfd);
             break;
+    }
+
+    if(opcode == 1){
+        ACK_packet_send(sockfd, &cliaddr, &servaddr, sizeof cliaddr, 0);
+    }
+    
+    switch(opcode){
+            case 1:
+                    recieve_file(sockfd, &servaddr, &cliaddr, sizeof(cliaddr), fileTargetPath, mode, blockSize);
+                    break;
+            case 2:
+                    send_file(sockfd, &servaddr, &cliaddr, sizeof(cliaddr), filePath, mode, blockSize);
+                    break;
     }
 
 
