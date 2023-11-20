@@ -18,7 +18,7 @@ char* read_file(FILE* _targetFile, char* _mode, int _blockSize, int* _sizeOfData
         c = fgetc(_targetFile);
         if(c == EOF) break;
         
-        if((_mode == "netascii" || _mode == "mail" ) && c == '\n') {
+        if((strcmp(_mode, "netascii") || strcmp(_mode, "mail")) && c == '\n') {
             append_char(outputData,'\r');
             index++;
         }
@@ -34,7 +34,7 @@ int write_file(FILE* _targetFile, char* _buffer, char* _mode, int _sizeOfData){
     int index = 0;
 
     while(index < _sizeOfData){
-        if((_mode == "netascii" || _mode == "mail" ) && _buffer[index] == '\r' && _buffer[index+1] == '\n') {
+        if((strcmp(_mode, "netascii") || strcmp(_mode, "mail")) && _buffer[index] == '\r' && _buffer[index+1] == '\n') {
             fprintf(_targetFile,"\n");
             index++;
             index++;

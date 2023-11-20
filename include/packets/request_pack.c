@@ -7,8 +7,21 @@
 ///                                                                                     ///
 ///////////////////////////////////////////////////////////////////////////////////////////
 
+///
+///     Includes all functions working with RRQ/WRQ packets
+///
+
+/// @brief Creates char* array RRQ/WRQ packet
+/// @param _returnSize 
+/// @param _opcode 
+/// @param _filename 
+/// @param _mode 
+/// @param _blockSize 
+/// @param _timeout 
+/// @param _tsize 
+/// @return char* array packet
 char* RRQ_WRQ_packet_create(int* _returnSize,int _opcode, char* _filename, char* _mode, int _blockSize, int _timeout, int _tsize) { 
-    size_t sizeOfPacket = 4+strlen(_filename)+strlen(_mode)+strlen("blocksize")+4+strlen("timeout")+3+strlen("tsize")+4;
+    size_t sizeOfPacket = 4+strlen(_filename)+strlen(_mode)+strlen("blksize")+4+strlen("timeout")+3+strlen("tsize")+4;
     char* packet = (char *) malloc(sizeOfPacket);
     memset(packet, 0, sizeOfPacket);
 
@@ -22,10 +35,6 @@ char* RRQ_WRQ_packet_create(int* _returnSize,int _opcode, char* _filename, char*
     }
     if(_mode==NULL){
         fprintf (stdout, "Internal ERROR (wrong MODE)");
-        exit(1);
-    }
-    if(256>_blockSize>65536){
-        fprintf (stdout, "Internal ERROR (wrong BLOCKSIZE)");
         exit(1);
     }
     if(0>_timeout){
@@ -58,10 +67,10 @@ char* RRQ_WRQ_packet_create(int* _returnSize,int _opcode, char* _filename, char*
     packet[index+1] = '\0';
     index++;
 
-    for(int i = 0; i< strlen("blocksize");i++){
-        packet[index+i]="blocksize"[i];
+    for(int i = 0; i< strlen("blksize");i++){
+        packet[index+i]="blksize"[i];
     }
-    index += strlen("blocksize");
+    index += strlen("blksize");
     packet[index+1] = '\0';
     index++;
 
@@ -107,7 +116,16 @@ char* RRQ_WRQ_packet_create(int* _returnSize,int _opcode, char* _filename, char*
     return packet;
 }
 
-int RRQ_WRQ_packet_read(char* _packet, int _packetLenght, char* _filename, char* _mode, int* _blockSize, int* _timeout, int* _tsize){
+/// @brief Read a request packet and parses it into variables
+/// @param _packet 
+/// @param _packetLenght 
+/// @param _filename 
+/// @param _mode 
+/// @param _blockSize 
+/// @param _timeout 
+/// @param _tsize 
+/// @return 0 - OK, # - ERROR
+int RRQ_WRQ_packet_read(char* _packet, int _packetLenght, char* _filename, char* _mode, unsigned int* _blockSize, unsigned int* _timeout, unsigned int* _tsize){
     char option[25];
 
     if(_packet[1] != 1 && _packet[1] != 2){
@@ -140,7 +158,7 @@ int RRQ_WRQ_packet_read(char* _packet, int _packetLenght, char* _filename, char*
         index++;
 
         *option = tolower(*option);
-        if(!strcmp(option, "blocksize")){
+        if(!strcmp(option, "blksize")){
             *_blockSize = (unsigned char)_packet[index] << 8 | (unsigned char) _packet[index+1];
             index += 3;
         }
@@ -164,7 +182,7 @@ int RRQ_WRQ_packet_read(char* _packet, int _packetLenght, char* _filename, char*
                 helpInt += helpCharArray[i]*scale(helpCounter-i-1);
             }*/
 
-            *_tsize = *_blockSize = (unsigned char)_packet[index] << 8 | (unsigned char) _packet[index+1];//helpInt;
+            *_tsize = (unsigned char)_packet[index] << 8 | (unsigned char) _packet[index+1];//helpInt;
             index += 3; //8-helpCounter;
         }
         else{
@@ -175,13 +193,21 @@ int RRQ_WRQ_packet_read(char* _packet, int _packetLenght, char* _filename, char*
     return (int)_packet[1];
 }
 
-void RRQ_WRQ_request_write(int _opcode, struct sockaddr_in* _sin, char* _filePath, char* _mode){
+/// @brief Writes out ACK packet onto stderr
+/// @param _opcode 
+/// @param _sin 
+/// @param _filePath 
+/// @param _mode 
+/// @param blocksize 
+/// @param timeout 
+/// @param tsize 
+void RRQ_WRQ_packet_write(int _opcode, struct sockaddr_in* _sin, char* _filePath, char* _mode, int blocksize, int timeout, int tsize){
     switch(_opcode){
         case 1:
-                fprintf(stderr, "RRQ %s:%d \"%s\" %s {$OPTS}\n", inet_ntoa(_sin->sin_addr),ntohs(_sin->sin_port), _filePath, _mode);
+                fprintf(stderr, "RRQ %s:%d \"%s\" %s blksize=%d timeout=%d tsize=%d\n", inet_ntoa(_sin->sin_addr),ntohs(_sin->sin_port), _filePath, _mode, blocksize,timeout,tsize);
                 break;
         case 2:
-                fprintf(stderr, "WRQ %s:%d \"%s\" %s {$OPTS}\n", inet_ntoa(_sin->sin_addr),ntohs(_sin->sin_port), _filePath, _mode);
+                fprintf(stderr, "WRQ %s:%d \"%s\" %s blksize=%d timeout=%d tsize=%d\n", inet_ntoa(_sin->sin_addr),ntohs(_sin->sin_port), _filePath, _mode, blocksize,timeout,tsize);
                 break;
     }
 }

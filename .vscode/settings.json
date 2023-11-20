@@ -8,6 +8,7 @@
         "ack_pack.h": "c",
         "request_pack.h": "c",
         "parser.h": "c",
-        "errno.h": "c"
+        "errno.h": "c",
+        "string.h": "c"
     }
 }

@@ -7,36 +7,42 @@
 ///                                                                                     ///
 ///////////////////////////////////////////////////////////////////////////////////////////
 
+// Standard include libraries
 #include <stdio.h>
-#include <strings.h>
 #include <sys/types.h>
-#include <arpa/inet.h>
 #include <sys/socket.h>
+#include <sys/statvfs.h>
+#include <string.h>
+#include <strings.h>
+#include <arpa/inet.h>
 #include <netinet/in.h>
 #include <unistd.h>
 #include <ctype.h>
 #include <stdlib.h>
-#include <string.h>
 #include <dirent.h>
 #include <errno.h>
-#include <sys/statvfs.h>
 
-
+// Includes all custom files
 #include "../include/common.c"
 #include "../include/parser.c"
 
+// Include all packet files
 #include "../include/packets/request_pack.c"
 #include "../include/packets/ack_pack.c"
 #include "../include/packets/oack_pack.c"
 #include "../include/packets/data_pack.c"
 #include "../include/packets/error_pack.c"
 
+// Include data flow and data work files
 #include "../include/read_write_file.c"
 #include "../include/send_file.c"
 #include "../include/recieve_file.c"
 
-
-int test_TFTP_request(int _opcode, char* _filePath, char* _mode){
+/// @brief Checks if the requested file is a valid input
+/// @param _opcode int input to determin what to check
+/// @param _filePath char* array of the file to be checked
+/// @return 0 - OK, # - ERROR
+int check_requested_file(int _opcode, char* _filePath){
         if(_opcode != 1 && _opcode != 2){
                 fprintf(stdout, "ERROR: opcode for request does not match possible opcodes, %d\n", _opcode);
                 return 4;
@@ -57,7 +63,15 @@ int test_TFTP_request(int _opcode, char* _filePath, char* _mode){
         return 0;
 }
 
-int handle_options(int _opcode, char* _folderpath, char* _filepath, int* _blockSize, int* _timeout, int* _tsize){
+/// @brief Handles options for incoming requests and set appropriet values for them
+/// @param _opcode int type of request
+/// @param _folderpath char* array of default folder path
+/// @param _filepath char* array of the file to be operated on
+/// @param _blockSize int* option for blksize
+/// @param _timeout int* option for timeout
+/// @param _tsize int* option for tsize
+/// @return 0 - OK, # - ERROR
+int handle_options(int _opcode, char* _folderpath, char* _filepath, unsigned int* _blockSize, unsigned int* _timeout, unsigned int* _tsize){
         FILE* testfile;
         switch(_opcode){
                 case 1:
@@ -71,16 +85,23 @@ int handle_options(int _opcode, char* _folderpath, char* _filepath, int* _blockS
                         long int size = ftell(testfile); 
                         fclose(testfile); 
 
+                        if( size > 17196646400){
+                                printf("ERROR: File too big to be send over TFTP\n"); 
+                                return 1;
+                        }
+
                         // Set blocksize for better file transfer dependent on size
-                        if(size>65500){
+                        if(size > 65500){
                                 *_blockSize=65500;
                         }
                         else{
-                                *_blockSize = 512 * (size%512);
+                                double amount = size/512;
+                                amount = (int)(amount < 0 ? (amount - 0.5) : (amount + 0.5));
+                                *_blockSize = 512 * (amount+1);
                         }
 
                         // Check timeout
-                        if(0>*_timeout>256)*_timeout=1;
+                        if(0>*_timeout || *_timeout>256)*_timeout=1;
 
                         // Set tsize to filesize
                         *_tsize = size;
@@ -88,10 +109,10 @@ int handle_options(int _opcode, char* _folderpath, char* _filepath, int* _blockS
                         break;
                 case 2:
                         // Check if blocksize is not outside allowed parameters
-                        if(512>*_blockSize>65500)return 8;
+                        if(512>*_blockSize || *_blockSize>65500)*_blockSize=65500;
 
                         // Check timeout
-                        if(0>*_timeout>256)*_timeout=1;
+                        if(0>*_timeout|| *_timeout>256)*_timeout=1;
 
                         // Set tsize to filesize
                         struct statvfs diskScanData;
@@ -110,8 +131,10 @@ int handle_options(int _opcode, char* _folderpath, char* _filepath, int* _blockS
         return 0;
 }
 
-///Joins incoming filename with default filefolder to create filepath
-///Parameters are a char array of incoming filename and a char array of the default folderpath
+/// @brief Joins folderpath and filepath into one char* array
+/// @param _filename char* array for filepath
+/// @param _folderPath char* array for folderpath
+/// @return char* array of the filepath with included default folderpath
 char* create_file_path(char* _filename, char* _folderPath){
         char* filePath = (char*)malloc(sizeof(_filename)+sizeof(_folderPath)+2);
         
@@ -122,11 +145,13 @@ char* create_file_path(char* _filename, char* _folderPath){
         return filePath;
 }
 
-  
+/// @brief Main logic function of tftp-server
+/// @param argc list of arguments
+/// @param argv amount of arguments
+/// @return 0 - tftp transaction was succesful, 1 - tftp transaction was not succesful
 int main(int argc, char *argv[]) 
 {
         int port = 69;
-        int index;
         int c;
         char* folderPath;
         opterr = 0;
@@ -168,7 +193,8 @@ int main(int argc, char *argv[])
         }       
 
         
-        int listenfd, len;
+        int listenfd;
+        unsigned int len;
         struct sockaddr_in servaddr,  cliaddr;
 
         bzero(&servaddr, sizeof(servaddr));
@@ -194,7 +220,8 @@ int main(int argc, char *argv[])
                 while(!fork()){
 
                         struct sockaddr_in *clientaddr_in = (struct sockaddr_in *)&cliaddr;
-                        int opcode, sizeOfPacket, blockID, blockSize, timeout, tsize, errorCode;
+                        int opcode, sizeOfPacket, blockID;
+                        unsigned int blockSize, timeout, tsize, errorCode;
                         char* filePath;
                         char filename[n], mode[50];
                         struct timeval timeout_struct; 
@@ -236,8 +263,9 @@ int main(int argc, char *argv[])
                                 return -1;
                         }
 
+                        
                         filePath = create_file_path(filename, folderPath);
-                        RRQ_WRQ_request_write(opcode, clientaddr_in, filePath, mode);
+                        RRQ_WRQ_packet_write(opcode, clientaddr_in, filePath, mode, blockSize, timeout, tsize);
                         
                         errorCode = handle_options(opcode, folderPath, filePath, &blockSize, &timeout, &tsize);
                         if(errorCode>0){
@@ -245,7 +273,8 @@ int main(int argc, char *argv[])
                                 close(listenfd);
                                 return -1;
                         }
-                        else if(errorCode = test_TFTP_request(opcode, filePath, mode)){
+                        errorCode = check_requested_file(opcode, filePath);
+                        if(errorCode>0){
                                 ERR_packet_send(listenfd, &servaddr,&cliaddr, sizeof(cliaddr),errorCode);
                                 return -1;
                         }
@@ -268,6 +297,14 @@ int main(int argc, char *argv[])
                         bzero(&errorMessage, sizeof(errorMessage));
 
                         // Switch and handle the file transfer 
+
+                        ///
+                        ///
+                        ///     Due to recvfrom() function failing inside of a function and destroying the socket without any explanation
+                        ///     the main algoriths for file transport have been moved from send_file() and recieve_file() functions into main
+                        ///
+                        ///
+
                         switch(opcode){
                                 case 1:
                                         n = recvfrom(listenfd, buffer2, sizeof(buffer2),0, (struct sockaddr*)&cliaddr,&len);
@@ -276,7 +313,7 @@ int main(int argc, char *argv[])
                                                 close(listenfd);
                                                 exit(1);
                                         }
-                                        ACK_message_write(inet_ntoa(clientaddr_in->sin_addr),ntohs(clientaddr_in->sin_port),0);
+                                        ACK_packet_write(inet_ntoa(clientaddr_in->sin_addr),ntohs(clientaddr_in->sin_port),0);
 
                                         char* dataPacket;
 
@@ -343,7 +380,7 @@ int main(int argc, char *argv[])
                                                         }   
                                                 }
                                                 else if (blockID == responceBlockID){
-                                                        ACK_message_write(inet_ntoa(clientaddr_in->sin_addr),ntohs(clientaddr_in->sin_port),responceBlockID);
+                                                        ACK_packet_write(inet_ntoa(clientaddr_in->sin_addr),ntohs(clientaddr_in->sin_port),responceBlockID);
                                                         free(data);
                                                         free(dataPacket);
                                                         blockID++;
@@ -395,12 +432,12 @@ int main(int argc, char *argv[])
                                                 data = DATA_packet_read(buffer2, &sizeOfData ,&responceBlockID,data,mode,blockSize,n);
                                                 if(responceBlockID < 0 ){
                                                         errorCode = ERR_packet_read(buffer2, errorMessage);
-                                                        ERR_message_write(inet_ntoa(clientaddr_in->sin_addr),ntohs(clientaddr_in->sin_port), ntohs(servaddr.sin_port),errorCode,errorMessage);
+                                                        ERR_packet_write(inet_ntoa(clientaddr_in->sin_addr),ntohs(clientaddr_in->sin_port), ntohs(servaddr.sin_port),errorCode,errorMessage);
                                                         close(listenfd);
                                                         exit(1);
                                                 }
                                                 
-                                                DATA_message_write(inet_ntoa(clientaddr_in->sin_addr),ntohs(clientaddr_in->sin_port), ntohs(servaddr.sin_port), blockID);
+                                                DATA_packet_write(inet_ntoa(clientaddr_in->sin_addr),ntohs(clientaddr_in->sin_port), ntohs(servaddr.sin_port), blockID);
 
                                                 if(blockID - 1 == responceBlockID){
                                                         while(n<=0 && timeoutCounter < 3){
@@ -420,7 +457,7 @@ int main(int argc, char *argv[])
                                                         } 
                                                         if(responceBlockID < 0 ){
                                                                 errorCode = ERR_packet_read(buffer2, errorMessage);
-                                                                ERR_message_write(inet_ntoa(clientaddr_in->sin_addr),ntohs(clientaddr_in->sin_port), ntohs(servaddr.sin_port),errorCode,errorMessage);
+                                                                ERR_packet_write(inet_ntoa(clientaddr_in->sin_addr),ntohs(clientaddr_in->sin_port), ntohs(servaddr.sin_port),errorCode,errorMessage);
                                                                 close(listenfd);
                                                                 exit(1);
                                                         }   
