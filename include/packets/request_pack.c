@@ -1,6 +1,16 @@
+///////////////////////////////////////////////////////////////////////////////////////////
+///                                                                                     ///
+///     TFTP server/client include                                                      ///
+///                                                                                     ///
+///     vytvoril: Tomas Vlach                                                           ///
+///     login: xvlach24                                                                 ///
+///                                                                                     ///
+///////////////////////////////////////////////////////////////////////////////////////////
+
 char* RRQ_WRQ_packet_create(int* _returnSize,int _opcode, char* _filename, char* _mode, int _blockSize, int _timeout, int _tsize) { 
     size_t sizeOfPacket = 4+strlen(_filename)+strlen(_mode)+strlen("blocksize")+4+strlen("timeout")+3+strlen("tsize")+4;
     char* packet = (char *) malloc(sizeOfPacket);
+    memset(packet, 0, sizeOfPacket);
 
     if (_opcode != 1 && _opcode != 2){
         fprintf (stdout, "Internal ERROR (wrong OPCODE)");
@@ -131,16 +141,31 @@ int RRQ_WRQ_packet_read(char* _packet, int _packetLenght, char* _filename, char*
 
         *option = tolower(*option);
         if(!strcmp(option, "blocksize")){
-            *_blockSize = (int)(((int)_packet[index]) << 8) | _packet[index+1];
+            *_blockSize = (unsigned char)_packet[index] << 8 | (unsigned char) _packet[index+1];
             index += 3;
         }
         else if(!strcmp(option, "timeout")){
-            *_timeout = (int)_packet[index];
+            *_timeout = (unsigned int)_packet[index];
             index += 2;
         }
         else if (!strcmp(option, "tsize")){
-            *_tsize = (int)(((int)_packet[index]) << 8) | _packet[index+1];
-            index += 3;
+            /*unsigned char helpCharArray[8];
+            long unsigned int helpInt = 0;
+            int helpCounter = 0;
+            index++;
+
+            while(_packet[index] != '\0'){
+                helpCharArray[helpCounter] = _packet[index];
+                helpCounter++;
+                index++;   
+            }
+
+            for(int i = 0; i<helpCounter; i++){
+                helpInt += helpCharArray[i]*scale(helpCounter-i-1);
+            }*/
+
+            *_tsize = *_blockSize = (unsigned char)_packet[index] << 8 | (unsigned char) _packet[index+1];//helpInt;
+            index += 3; //8-helpCounter;
         }
         else{
             return -8;
@@ -153,10 +178,10 @@ int RRQ_WRQ_packet_read(char* _packet, int _packetLenght, char* _filename, char*
 void RRQ_WRQ_request_write(int _opcode, struct sockaddr_in* _sin, char* _filePath, char* _mode){
     switch(_opcode){
         case 1:
-                fprintf(stderr, "RRQ %s:%d \"%s\" %s {$OPTS}\n", inet_ntoa(_sin->sin_addr),_sin->sin_port, _filePath, _mode);
+                fprintf(stderr, "RRQ %s:%d \"%s\" %s {$OPTS}\n", inet_ntoa(_sin->sin_addr),ntohs(_sin->sin_port), _filePath, _mode);
                 break;
         case 2:
-                fprintf(stderr, "WRQ %s:%d \"%s\" %s {$OPTS}\n", inet_ntoa(_sin->sin_addr),_sin->sin_port, _filePath, _mode);
+                fprintf(stderr, "WRQ %s:%d \"%s\" %s {$OPTS}\n", inet_ntoa(_sin->sin_addr),ntohs(_sin->sin_port), _filePath, _mode);
                 break;
     }
 }

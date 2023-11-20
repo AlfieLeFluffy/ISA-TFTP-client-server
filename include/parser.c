@@ -10,19 +10,19 @@ void checkFolderExists(char* _folderPath){
 
 char* parseFolderPath(char* _folderPath){
     checkFolderExists(_folderPath);
-    if (_folderPath == NULL) fprintf(stdout, "Selected default path is base directory of this application\n");
-    else fprintf(stdout, "Selected default path is: %s\n", _folderPath);
+    if (_folderPath == NULL) fprintf(stdout, "SETUP: Selected default path is base directory of this application\n");
+    else fprintf(stdout, "SETUP: Selected default path is: %s\n", _folderPath);
     return _folderPath;
 }
 
-char* parseOutputFilePath(char* _filePath){
+char* parseUploadFilePath(char* _filePath){
     if (access(_filePath, F_OK) == 0) return _filePath;
     fprintf(stdout, "Selected file path is not accesable or doesn't exist: %s\n", _filePath);
     exit(1);
 }
 
 
-char* parseInputFilePath(char* _filePath){
+char* parseFDownloadilePath(char* _filePath){
     if (access(_filePath, F_OK) != 0) return _filePath;
     fprintf(stdout, "Selected file already exists, can't rewrite: %s\n", _filePath);
     exit(1);
