@@ -7,6 +7,11 @@
 ///                                                                                     ///
 ///////////////////////////////////////////////////////////////////////////////////////////
 
+///
+///     Includes all functions working with DATA packets
+///
+
+
 char* DATA_packet_create(int* _returnSize, int _blockID, char* _data, int _sizeOfData) { 
     int sizeOfPacket = 4+_sizeOfData;
     char* packet = (char *) malloc(sizeOfPacket*sizeof(char));
@@ -48,6 +53,6 @@ char* DATA_packet_read(char* _packet, int* _sizeOfData, int* _responceBlockID, c
     return data;
 }
 
-void DATA_message_write(char* _ip, int _sourcePort, int _destinPort, int _blockID){
+void DATA_packet_write(char* _ip, int _sourcePort, int _destinPort, int _blockID){
     fprintf(stderr, "DATA %s:%d:%d %d\n", _ip, _sourcePort, _destinPort, _blockID);  
 }

@@ -67,11 +67,14 @@ int handle_options_send(char* _filepath, int* _blockSize, int* _timeout, int* _t
         fclose(testfile); 
 
         // Set blocksize for better file transfer dependent on size
-        if(size>65500){
+        if(size > 65500){
                 *_blockSize=65500;
         }
+        else if(size < 512){
+                *_blockSize = 512;
+        }
         else{
-                *_blockSize = 512 * (size%512);
+            *_blockSize = 512 * (size%512);
         }
 
         // Check timeout
@@ -305,11 +308,11 @@ int main(int argc, char *argv[])
     switch (buffer[1]){
         case 4:
             blockID = ACK_packet_read(buffer);
-            ACK_message_write(inet_ntoa(servaddr.sin_addr),ntohs(servaddr.sin_port), blockID);
+            ACK_packet_write(inet_ntoa(servaddr.sin_addr),ntohs(servaddr.sin_port), blockID);
             break;
         case 5:
             errorCode = ERR_packet_read(buffer, errorMessage);
-            ERR_message_write(inet_ntoa(servaddr.sin_addr),ntohs(servaddr.sin_port), ntohs(cliaddr.sin_port),errorCode,errorMessage);
+            ERR_packet_write(inet_ntoa(servaddr.sin_addr),ntohs(servaddr.sin_port), ntohs(cliaddr.sin_port),errorCode,errorMessage);
             error_exit_FD(errorCode, sockfd);
             break;
         case 6:
@@ -319,7 +322,7 @@ int main(int argc, char *argv[])
                 close(sockfd);
                 exit(1);
             }
-            OACK_message_write(inet_ntoa(servaddr.sin_addr),ntohs(servaddr.sin_port),blockSize,timeout,tsize);
+            OACK_packet_write(inet_ntoa(servaddr.sin_addr),ntohs(servaddr.sin_port),blockSize,timeout,tsize);
             errorCode = handle_options_recieve(blockSize, timeout, tsize);
             if(errorCode == 1){
                 fprintf(stdout, "ERROR: handling OACK responce: unable to process request\n");
@@ -387,12 +390,12 @@ int main(int argc, char *argv[])
                             data = DATA_packet_read(buffer2, &sizeOfData ,&responceBlockID,data,mode,blockSize,n);
                             if(responceBlockID < 0 ){
                                     errorCode = ERR_packet_read(buffer2, errorMessage);
-                                    ERR_message_write(inet_ntoa(servaddr.sin_addr),ntohs(servaddr.sin_port), ntohs(cliaddr.sin_port),errorCode,errorMessage);
+                                    ERR_packet_write(inet_ntoa(servaddr.sin_addr),ntohs(servaddr.sin_port), ntohs(cliaddr.sin_port),errorCode,errorMessage);
                                     close(sockfd);
                                     exit(1);
                             }
                             
-                            DATA_message_write(inet_ntoa(servaddr.sin_addr),ntohs(servaddr.sin_port), ntohs(cliaddr.sin_port), blockID);
+                            DATA_packet_write(inet_ntoa(servaddr.sin_addr),ntohs(servaddr.sin_port), ntohs(cliaddr.sin_port), blockID);
 
                             if(blockID - 1 == responceBlockID){
                                     while(n<=0 && timeoutCounter < 3){
@@ -412,7 +415,7 @@ int main(int argc, char *argv[])
                                     } 
                                     if(responceBlockID < 0 ){
                                             errorCode = ERR_packet_read(buffer2, errorMessage);
-                                            ERR_message_write(inet_ntoa(servaddr.sin_addr),ntohs(servaddr.sin_port), ntohs(cliaddr.sin_port),errorCode,errorMessage);
+                                            ERR_packet_write(inet_ntoa(servaddr.sin_addr),ntohs(servaddr.sin_port), ntohs(cliaddr.sin_port),errorCode,errorMessage);
                                             close(sockfd);
                                             exit(1);
                                     }   
@@ -503,7 +506,7 @@ int main(int argc, char *argv[])
                                     }   
                             }
                             else if (blockID == responceBlockID){
-                                    ACK_message_write(inet_ntoa(servaddr.sin_addr),ntohs(servaddr.sin_port),responceBlockID);
+                                    ACK_packet_write(inet_ntoa(servaddr.sin_addr),ntohs(servaddr.sin_port),responceBlockID);
                                     free(data);
                                     free(dataPacket);
                                     blockID++;

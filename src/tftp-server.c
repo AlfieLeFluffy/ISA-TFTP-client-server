@@ -72,11 +72,13 @@ int handle_options(int _opcode, char* _folderpath, char* _filepath, int* _blockS
                         fclose(testfile); 
 
                         // Set blocksize for better file transfer dependent on size
-                        if(size>65500){
+                        if(size > 65500){
                                 *_blockSize=65500;
                         }
                         else{
-                                *_blockSize = 512 * (size%512);
+                                double amount = size/512;
+                                amount = (int)(amount < 0 ? (amount - 0.5) : (amount + 0.5));
+                                *_blockSize = 512 * (amount+1);
                         }
 
                         // Check timeout
@@ -88,10 +90,10 @@ int handle_options(int _opcode, char* _folderpath, char* _filepath, int* _blockS
                         break;
                 case 2:
                         // Check if blocksize is not outside allowed parameters
-                        if(512>*_blockSize>65500)return 8;
+                        if(512>*_blockSize || *_blockSize>65500)*_blockSize=65500;
 
                         // Check timeout
-                        if(0>*_timeout>256)*_timeout=1;
+                        if(0>*_timeout|| *_timeout>256)*_timeout=1;
 
                         // Set tsize to filesize
                         struct statvfs diskScanData;
@@ -236,8 +238,9 @@ int main(int argc, char *argv[])
                                 return -1;
                         }
 
+                        
                         filePath = create_file_path(filename, folderPath);
-                        RRQ_WRQ_request_write(opcode, clientaddr_in, filePath, mode);
+                        RRQ_WRQ_packet_write(opcode, clientaddr_in, filePath, mode, blockSize, timeout, tsize);
                         
                         errorCode = handle_options(opcode, folderPath, filePath, &blockSize, &timeout, &tsize);
                         if(errorCode>0){
@@ -276,7 +279,7 @@ int main(int argc, char *argv[])
                                                 close(listenfd);
                                                 exit(1);
                                         }
-                                        ACK_message_write(inet_ntoa(clientaddr_in->sin_addr),ntohs(clientaddr_in->sin_port),0);
+                                        ACK_packet_write(inet_ntoa(clientaddr_in->sin_addr),ntohs(clientaddr_in->sin_port),0);
 
                                         char* dataPacket;
 
@@ -343,7 +346,7 @@ int main(int argc, char *argv[])
                                                         }   
                                                 }
                                                 else if (blockID == responceBlockID){
-                                                        ACK_message_write(inet_ntoa(clientaddr_in->sin_addr),ntohs(clientaddr_in->sin_port),responceBlockID);
+                                                        ACK_packet_write(inet_ntoa(clientaddr_in->sin_addr),ntohs(clientaddr_in->sin_port),responceBlockID);
                                                         free(data);
                                                         free(dataPacket);
                                                         blockID++;
@@ -395,12 +398,12 @@ int main(int argc, char *argv[])
                                                 data = DATA_packet_read(buffer2, &sizeOfData ,&responceBlockID,data,mode,blockSize,n);
                                                 if(responceBlockID < 0 ){
                                                         errorCode = ERR_packet_read(buffer2, errorMessage);
-                                                        ERR_message_write(inet_ntoa(clientaddr_in->sin_addr),ntohs(clientaddr_in->sin_port), ntohs(servaddr.sin_port),errorCode,errorMessage);
+                                                        ERR_packet_write(inet_ntoa(clientaddr_in->sin_addr),ntohs(clientaddr_in->sin_port), ntohs(servaddr.sin_port),errorCode,errorMessage);
                                                         close(listenfd);
                                                         exit(1);
                                                 }
                                                 
-                                                DATA_message_write(inet_ntoa(clientaddr_in->sin_addr),ntohs(clientaddr_in->sin_port), ntohs(servaddr.sin_port), blockID);
+                                                DATA_packet_write(inet_ntoa(clientaddr_in->sin_addr),ntohs(clientaddr_in->sin_port), ntohs(servaddr.sin_port), blockID);
 
                                                 if(blockID - 1 == responceBlockID){
                                                         while(n<=0 && timeoutCounter < 3){
@@ -420,7 +423,7 @@ int main(int argc, char *argv[])
                                                         } 
                                                         if(responceBlockID < 0 ){
                                                                 errorCode = ERR_packet_read(buffer2, errorMessage);
-                                                                ERR_message_write(inet_ntoa(clientaddr_in->sin_addr),ntohs(clientaddr_in->sin_port), ntohs(servaddr.sin_port),errorCode,errorMessage);
+                                                                ERR_packet_write(inet_ntoa(clientaddr_in->sin_addr),ntohs(clientaddr_in->sin_port), ntohs(servaddr.sin_port),errorCode,errorMessage);
                                                                 close(listenfd);
                                                                 exit(1);
                                                         }   

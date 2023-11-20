@@ -7,6 +7,11 @@
 ///                                                                                     ///
 ///////////////////////////////////////////////////////////////////////////////////////////
 
+///
+///     Includes all functions working with RRQ/WRQ packets
+///
+
+
 char* RRQ_WRQ_packet_create(int* _returnSize,int _opcode, char* _filename, char* _mode, int _blockSize, int _timeout, int _tsize) { 
     size_t sizeOfPacket = 4+strlen(_filename)+strlen(_mode)+strlen("blocksize")+4+strlen("timeout")+3+strlen("tsize")+4;
     char* packet = (char *) malloc(sizeOfPacket);
@@ -164,7 +169,7 @@ int RRQ_WRQ_packet_read(char* _packet, int _packetLenght, char* _filename, char*
                 helpInt += helpCharArray[i]*scale(helpCounter-i-1);
             }*/
 
-            *_tsize = *_blockSize = (unsigned char)_packet[index] << 8 | (unsigned char) _packet[index+1];//helpInt;
+            *_tsize = (unsigned char)_packet[index] << 8 | (unsigned char) _packet[index+1];//helpInt;
             index += 3; //8-helpCounter;
         }
         else{
@@ -175,13 +180,13 @@ int RRQ_WRQ_packet_read(char* _packet, int _packetLenght, char* _filename, char*
     return (int)_packet[1];
 }
 
-void RRQ_WRQ_request_write(int _opcode, struct sockaddr_in* _sin, char* _filePath, char* _mode){
+void RRQ_WRQ_packet_write(int _opcode, struct sockaddr_in* _sin, char* _filePath, char* _mode, int blocksize, int timeout, int tsize){
     switch(_opcode){
         case 1:
-                fprintf(stderr, "RRQ %s:%d \"%s\" %s {$OPTS}\n", inet_ntoa(_sin->sin_addr),ntohs(_sin->sin_port), _filePath, _mode);
+                fprintf(stderr, "RRQ %s:%d \"%s\" %s blocksize=%d timeout=%d tsize=%d\n", inet_ntoa(_sin->sin_addr),ntohs(_sin->sin_port), _filePath, _mode, blocksize,timeout,tsize);
                 break;
         case 2:
-                fprintf(stderr, "WRQ %s:%d \"%s\" %s {$OPTS}\n", inet_ntoa(_sin->sin_addr),ntohs(_sin->sin_port), _filePath, _mode);
+                fprintf(stderr, "WRQ %s:%d \"%s\" %s blocksize=%d timeout=%d tsize=%d\n", inet_ntoa(_sin->sin_addr),ntohs(_sin->sin_port), _filePath, _mode, blocksize,timeout,tsize);
                 break;
     }
 }

@@ -7,6 +7,11 @@
 ///                                                                                     ///
 ///////////////////////////////////////////////////////////////////////////////////////////
 
+///
+///     Includes all functions working with ERROR packets
+///
+
+
 #include <errno.h>
 
 #include "../lists/error_code_msg.h"
@@ -61,7 +66,7 @@ int ERR_packet_read(char* _packet, char* _errorMessage){
     return (int)_packet[3];
 }
 
-void ERR_message_write(char* _ip, int _sourcePort, int _destinPort, int _errorCode, char* _errorMessage){
+void ERR_packet_write(char* _ip, int _sourcePort, int _destinPort, int _errorCode, char* _errorMessage){
     fprintf(stderr, "ERROR %s:%d:%d %d \"%s\"\n",_ip, _sourcePort, _destinPort, _errorCode, _errorMessage);
 }
 

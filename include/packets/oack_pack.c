@@ -7,6 +7,10 @@
 ///                                                                                     ///
 ///////////////////////////////////////////////////////////////////////////////////////////
 
+///
+///     Includes all functions working with OACK packets
+///
+
 char* OACK_packet_create(int* _returnSize, int _blockSize, int _timeout, int _tsize) { 
     size_t sizeOfPacket = 2+strlen("blocksize")+4+strlen("timeout")+3+strlen("tsize")+4;
     char* packet = (char *) malloc(sizeOfPacket);
@@ -106,7 +110,7 @@ int OACK_packet_read(char* _packet, int _packetLenght, int* _blockSize, int* _ti
     return 0;
 }
 
-void OACK_message_write(char* _ip, int _sourcePort, int _blockSize, int _timeout, int _tsize){
+void OACK_packet_write(char* _ip, int _sourcePort, int _blockSize, int _timeout, int _tsize){
     fprintf(stderr, "OACK %s:%d: blocksize=%d timeout=%d tsize=%d\n",_ip, _sourcePort, _blockSize, _timeout, _tsize);
 }
 
