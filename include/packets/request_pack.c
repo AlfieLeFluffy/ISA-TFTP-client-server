@@ -13,7 +13,7 @@
 
 
 char* RRQ_WRQ_packet_create(int* _returnSize,int _opcode, char* _filename, char* _mode, int _blockSize, int _timeout, int _tsize) { 
-    size_t sizeOfPacket = 4+strlen(_filename)+strlen(_mode)+strlen("blocksize")+4+strlen("timeout")+3+strlen("tsize")+4;
+    size_t sizeOfPacket = 4+strlen(_filename)+strlen(_mode)+strlen("blksize")+4+strlen("timeout")+3+strlen("tsize")+4;
     char* packet = (char *) malloc(sizeOfPacket);
     memset(packet, 0, sizeOfPacket);
 
@@ -59,10 +59,10 @@ char* RRQ_WRQ_packet_create(int* _returnSize,int _opcode, char* _filename, char*
     packet[index+1] = '\0';
     index++;
 
-    for(int i = 0; i< strlen("blocksize");i++){
-        packet[index+i]="blocksize"[i];
+    for(int i = 0; i< strlen("blksize");i++){
+        packet[index+i]="blksize"[i];
     }
-    index += strlen("blocksize");
+    index += strlen("blksize");
     packet[index+1] = '\0';
     index++;
 
@@ -141,7 +141,7 @@ int RRQ_WRQ_packet_read(char* _packet, int _packetLenght, char* _filename, char*
         index++;
 
         *option = tolower(*option);
-        if(!strcmp(option, "blocksize")){
+        if(!strcmp(option, "blksize")){
             *_blockSize = (unsigned char)_packet[index] << 8 | (unsigned char) _packet[index+1];
             index += 3;
         }
@@ -179,10 +179,10 @@ int RRQ_WRQ_packet_read(char* _packet, int _packetLenght, char* _filename, char*
 void RRQ_WRQ_packet_write(int _opcode, struct sockaddr_in* _sin, char* _filePath, char* _mode, int blocksize, int timeout, int tsize){
     switch(_opcode){
         case 1:
-                fprintf(stderr, "RRQ %s:%d \"%s\" %s blocksize=%d timeout=%d tsize=%d\n", inet_ntoa(_sin->sin_addr),ntohs(_sin->sin_port), _filePath, _mode, blocksize,timeout,tsize);
+                fprintf(stderr, "RRQ %s:%d \"%s\" %s blksize=%d timeout=%d tsize=%d\n", inet_ntoa(_sin->sin_addr),ntohs(_sin->sin_port), _filePath, _mode, blocksize,timeout,tsize);
                 break;
         case 2:
-                fprintf(stderr, "WRQ %s:%d \"%s\" %s blocksize=%d timeout=%d tsize=%d\n", inet_ntoa(_sin->sin_addr),ntohs(_sin->sin_port), _filePath, _mode, blocksize,timeout,tsize);
+                fprintf(stderr, "WRQ %s:%d \"%s\" %s blksize=%d timeout=%d tsize=%d\n", inet_ntoa(_sin->sin_addr),ntohs(_sin->sin_port), _filePath, _mode, blocksize,timeout,tsize);
                 break;
     }
 }

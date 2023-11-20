@@ -12,7 +12,7 @@
 ///
 
 char* OACK_packet_create(int* _returnSize, int _blockSize, int _timeout, int _tsize) { 
-    size_t sizeOfPacket = 2+strlen("blocksize")+4+strlen("timeout")+3+strlen("tsize")+4;
+    size_t sizeOfPacket = 2+strlen("blksize")+4+strlen("timeout")+3+strlen("tsize")+4;
     char* packet = (char *) malloc(sizeOfPacket);
     memset(packet, 0, sizeOfPacket);
 
@@ -21,10 +21,10 @@ char* OACK_packet_create(int* _returnSize, int _blockSize, int _timeout, int _ts
     packet[0] = '\0';
     packet[1] = 6;
 
-    for(int i = 0; i< strlen("blocksize");i++){
-        packet[index+i]="blocksize"[i];
+    for(int i = 0; i< strlen("blksize");i++){
+        packet[index+i]="blksize"[i];
     }
-    index += strlen("blocksize");
+    index += strlen("blksize");
     packet[index] = '\0';
     index++;
 
@@ -88,7 +88,7 @@ int OACK_packet_read(char* _packet, int _packetLenght,unsigned int* _blockSize, 
         index++;
 
         *option = tolower(*option);
-        if(!strcmp(option, "blocksize")){
+        if(!strcmp(option, "blksize")){
             *_blockSize = (unsigned char)_packet[index] << 8 | (unsigned char) _packet[index+1];
             index += 3;
         }
@@ -111,7 +111,7 @@ int OACK_packet_read(char* _packet, int _packetLenght,unsigned int* _blockSize, 
 }
 
 void OACK_packet_write(char* _ip, int _sourcePort, int _blockSize, int _timeout, int _tsize){
-    fprintf(stderr, "OACK %s:%d: blocksize=%d timeout=%d tsize=%d\n",_ip, _sourcePort, _blockSize, _timeout, _tsize);
+    fprintf(stderr, "OACK %s:%d: blksize=%d timeout=%d tsize=%d\n",_ip, _sourcePort, _blockSize, _timeout, _tsize);
 }
 
 void OACK_packet_send(int _listenfd, struct sockaddr_in* _servaddr, struct sockaddr_in* _cliaddr, int _cliaddrSize, int _blockSize, int _timeout, int _tsize){

@@ -340,7 +340,7 @@ int main(int argc, char *argv[])
             }
             break;
         default:
-            fprintf(stdout, "ERROR: internal error (wrong answer OPCODE)\n");
+            fprintf(stdout, "ERROR: unknown error, check internet connection / server is up\n");
             error_exit_FD(1,sockfd);
             break;
     }
