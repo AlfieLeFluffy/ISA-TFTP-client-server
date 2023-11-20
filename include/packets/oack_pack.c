@@ -11,6 +11,12 @@
 ///     Includes all functions working with OACK packets
 ///
 
+/// @brief Creates char* array of OACK packet and includes options.
+/// @param _returnSize 
+/// @param _blockSize 
+/// @param _timeout 
+/// @param _tsize 
+/// @return char* array containing the OACK packet.
 char* OACK_packet_create(int* _returnSize, int _blockSize, int _timeout, int _tsize) { 
     size_t sizeOfPacket = 2+strlen("blksize")+4+strlen("timeout")+3+strlen("tsize")+4;
     char* packet = (char *) malloc(sizeOfPacket);
@@ -69,6 +75,13 @@ char* OACK_packet_create(int* _returnSize, int _blockSize, int _timeout, int _ts
     return packet;
 }
 
+/// @brief Reads a ACK packet and returns it's blockID and parses options
+/// @param _packet 
+/// @param _packetLenght 
+/// @param _blockSize 
+/// @param _timeout 
+/// @param _tsize 
+/// @return int blockID
 int OACK_packet_read(char* _packet, int _packetLenght,unsigned int* _blockSize, unsigned int* _timeout, unsigned int* _tsize){
     if(_packet[1] != 6){
         fprintf(stdout, "ERROR: internal error (wrong opcode in error_packet_read)");
@@ -110,10 +123,24 @@ int OACK_packet_read(char* _packet, int _packetLenght,unsigned int* _blockSize, 
     return 0;
 }
 
+/// @brief Writes out ACK packet onto stderr
+/// @param _ip 
+/// @param _sourcePort 
+/// @param _blockSize 
+/// @param _timeout 
+/// @param _tsize 
 void OACK_packet_write(char* _ip, int _sourcePort, int _blockSize, int _timeout, int _tsize){
     fprintf(stderr, "OACK %s:%d: blksize=%d timeout=%d tsize=%d\n",_ip, _sourcePort, _blockSize, _timeout, _tsize);
 }
 
+/// @brief ends ACK packet with blockID to specified address
+/// @param _listenfd 
+/// @param _servaddr 
+/// @param _cliaddr 
+/// @param _cliaddrSize 
+/// @param _blockSize 
+/// @param _timeout 
+/// @param _tsize 
 void OACK_packet_send(int _listenfd, struct sockaddr_in* _servaddr, struct sockaddr_in* _cliaddr, int _cliaddrSize, int _blockSize, int _timeout, int _tsize){
     int sizeOfPacket;
     char* oackPacket = OACK_packet_create(&sizeOfPacket, _blockSize, _timeout, _tsize);

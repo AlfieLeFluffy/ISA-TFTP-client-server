@@ -297,6 +297,14 @@ int main(int argc, char *argv[])
                         bzero(&errorMessage, sizeof(errorMessage));
 
                         // Switch and handle the file transfer 
+
+                        ///
+                        ///
+                        ///     Due to recvfrom() function failing inside of a function and destroying the socket without any explanation
+                        ///     the main algoriths for file transport have been moved from send_file() and recieve_file() functions into main
+                        ///
+                        ///
+
                         switch(opcode){
                                 case 1:
                                         n = recvfrom(listenfd, buffer2, sizeof(buffer2),0, (struct sockaddr*)&cliaddr,&len);

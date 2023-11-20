@@ -377,6 +377,14 @@ int main(int argc, char *argv[])
     ///
     ///     START OF START OF DOWNLOAD/UPLOAD LOGIC
 
+    ///
+    ///
+    ///     Due to recvfrom() function failing inside of a function and destroying the socket without any explanation
+    ///     the main algoriths for file transport have been moved from send_file() and recieve_file() functions into main
+    ///
+    ///
+
+
 
     char buffer2[4+blockSize];
     char* dataPacket;

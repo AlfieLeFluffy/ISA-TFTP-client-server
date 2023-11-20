@@ -11,7 +11,15 @@
 ///     Includes all functions working with RRQ/WRQ packets
 ///
 
-
+/// @brief Creates char* array RRQ/WRQ packet
+/// @param _returnSize 
+/// @param _opcode 
+/// @param _filename 
+/// @param _mode 
+/// @param _blockSize 
+/// @param _timeout 
+/// @param _tsize 
+/// @return char* array packet
 char* RRQ_WRQ_packet_create(int* _returnSize,int _opcode, char* _filename, char* _mode, int _blockSize, int _timeout, int _tsize) { 
     size_t sizeOfPacket = 4+strlen(_filename)+strlen(_mode)+strlen("blksize")+4+strlen("timeout")+3+strlen("tsize")+4;
     char* packet = (char *) malloc(sizeOfPacket);
@@ -108,6 +116,15 @@ char* RRQ_WRQ_packet_create(int* _returnSize,int _opcode, char* _filename, char*
     return packet;
 }
 
+/// @brief Read a request packet and parses it into variables
+/// @param _packet 
+/// @param _packetLenght 
+/// @param _filename 
+/// @param _mode 
+/// @param _blockSize 
+/// @param _timeout 
+/// @param _tsize 
+/// @return 0 - OK, # - ERROR
 int RRQ_WRQ_packet_read(char* _packet, int _packetLenght, char* _filename, char* _mode, unsigned int* _blockSize, unsigned int* _timeout, unsigned int* _tsize){
     char option[25];
 
@@ -176,6 +193,14 @@ int RRQ_WRQ_packet_read(char* _packet, int _packetLenght, char* _filename, char*
     return (int)_packet[1];
 }
 
+/// @brief Writes out ACK packet onto stderr
+/// @param _opcode 
+/// @param _sin 
+/// @param _filePath 
+/// @param _mode 
+/// @param blocksize 
+/// @param timeout 
+/// @param tsize 
 void RRQ_WRQ_packet_write(int _opcode, struct sockaddr_in* _sin, char* _filePath, char* _mode, int blocksize, int timeout, int tsize){
     switch(_opcode){
         case 1:
