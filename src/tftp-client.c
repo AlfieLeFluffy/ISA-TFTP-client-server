@@ -1,4 +1,12 @@
-// udp client driver program
+///////////////////////////////////////////////////////////////////////////////////////////
+///                                                                                     ///
+///     TFTP client                                                                     ///
+///                                                                                     ///
+///     vytvoril: Tomas Vlach                                                           ///
+///     login: xvlach24                                                                 ///
+///                                                                                     ///
+///////////////////////////////////////////////////////////////////////////////////////////
+
 #include <stdio.h>
 #include <strings.h>
 #include <sys/types.h>
@@ -184,7 +192,7 @@ int main(int argc, char *argv[])
     ///
     ////////////////////////////////////
     ///
-    ///     START OF PROGRAM LOGIC
+    ///     START OF NETWORK SETUP
 
 
     // Definition of variables used
@@ -220,7 +228,7 @@ int main(int argc, char *argv[])
     }
 
     // Set socket timeout  
-    timeout_struct.tv_sec = 3;
+    timeout_struct.tv_sec = 1;
     timeout_struct.tv_usec = 0;
     if (setsockopt (sockfd, SOL_SOCKET, SO_RCVTIMEO, &timeout_struct,sizeof timeout_struct) < 0) fprintf(stdout,"ERROR : setsocketopt failed, timeout \n");
     
@@ -232,21 +240,34 @@ int main(int argc, char *argv[])
         error_exit_FD(1, sockfd);
     }
 
+    ///     END OF NETWORK SETUP
+    ///
+    ////////////////////////////////////
+    ///
+    ///     START OF REQUEST
+
     // Create packet dependent on which opetation is required 
     mode = "netascii";
     if (filePathDownload != NULL){
         opcode = 1;
-        requestPacket = RRQ_WRQ_packet_create(&sizeOfPacket,1,filePathDownload,mode,65536,1,0);
         filePath = filePathDownload;
+        requestPacket = RRQ_WRQ_packet_create(&sizeOfPacket,1,filePathDownload,mode,65536,1,0);
     }
     else{
         opcode = 2;
-        requestPacket = RRQ_WRQ_packet_create(&sizeOfPacket,2,fileTargetPath,mode,256,1,0);
         filePath = filePathUpload;
+        handle_options_send(filePath, &blockSize, &timeout, &tsize);
+        requestPacket = RRQ_WRQ_packet_create(&sizeOfPacket,2,fileTargetPath,mode,blockSize,timeout,tsize); 
     }
     sendto(sockfd, requestPacket, sizeOfPacket, 0, (struct sockaddr*)NULL, sizeof(servaddr));
     free(requestPacket);
     close(sockfd);
+
+    ///     END OF REQUEST
+    ///
+    ////////////////////////////////////
+    ///
+    ///     START OF PARSING RESPONSE AND OACK
 
     // Reset cliaddr for inversed comunication
     bzero(&cliaddr, sizeof(cliaddr));
@@ -260,11 +281,23 @@ int main(int argc, char *argv[])
         printf("ERROR : could not bind socket \n");
         exit(1);
     }
+
+    // Set socket timeout  
+    timeout_struct.tv_sec = 1;
+    timeout_struct.tv_usec = 0;
+    if (setsockopt (sockfd, SOL_SOCKET, SO_RCVTIMEO, &timeout_struct,sizeof timeout_struct) < 0) fprintf(stdout,"ERROR : setsocketopt failed, timeout \n");
+    
     
 
     // Receive responce from server
     int len = sizeof(servaddr);
     n = recvfrom(sockfd, buffer, sizeof(buffer),0, (struct sockaddr*)&servaddr,&len); 
+
+    if(n<0){
+        fprintf(stdout, "ERROR: ACK/OACK, timeout error %d \n", n);
+        close(sockfd);
+        exit(1);
+    }
 
     char errorMessage[sizeof(buffer)];
     bzero(&errorMessage, sizeof(errorMessage));
@@ -272,11 +305,11 @@ int main(int argc, char *argv[])
     switch (buffer[1]){
         case 4:
             blockID = ACK_packet_read(buffer);
-            ACK_message_write(inet_ntoa(servaddr.sin_addr),servaddr.sin_port, blockID);
+            ACK_message_write(inet_ntoa(servaddr.sin_addr),ntohs(servaddr.sin_port), blockID);
             break;
         case 5:
             errorCode = ERR_packet_read(buffer, errorMessage);
-            ERR_message_write(inet_ntoa(servaddr.sin_addr),servaddr.sin_port, cliaddr.sin_port,errorCode,errorMessage);
+            ERR_message_write(inet_ntoa(servaddr.sin_addr),ntohs(servaddr.sin_port), ntohs(cliaddr.sin_port),errorCode,errorMessage);
             error_exit_FD(errorCode, sockfd);
             break;
         case 6:
@@ -305,17 +338,193 @@ int main(int argc, char *argv[])
             break;
     }
 
-    if(opcode == 1){
-        ACK_packet_send(sockfd, &cliaddr, &servaddr, sizeof cliaddr, 0);
-    }
+    ///     END OF PARSING RESPONSE AND OACK
+    ///
+    ////////////////////////////////////
+    ///
+    ///     START OF START OF DOWNLOAD/UPLOAD LOGIC
+
+
+    char buffer2[4+blockSize];
+    char* dataPacket;
+    int  sizeOfData, responceBlockID, timeoutCounter;
+    FILE *readFromFile;
     
     switch(opcode){
             case 1:
-                    recieve_file(sockfd, &servaddr, &cliaddr, sizeof(cliaddr), fileTargetPath, mode, blockSize);
+                    ACK_packet_send(sockfd, &cliaddr, &servaddr, sizeof cliaddr, 0);
+
+                    char* data;
+
+                    n = 0;
+                    blockID = 1;
+                    sizeOfData = blockSize;
+                    timeoutCounter = 0;
+                    len = sizeof cliaddr;
+
+                    if((readFromFile = fopen(fileTargetPath, "w")) < 0){
+                            fprintf(stdout, "ERROR: internal errror, file could not be opened\n");
+                            close(sockfd);
+                            exit(1);
+                    }
+
+                    while (sizeOfData >= blockSize){
+                            while(n<=0 && timeoutCounter < 3){
+                                    n = recvfrom(sockfd, buffer2, sizeof buffer2,0, (struct sockaddr*)&servaddr,&len);
+                                    if(n<0){
+                                            fprintf(stdout, "ERROR: DATA, timeout error %d errno %d\n", n, errno);
+                                            timeoutCounter ++;
+                                    }
+                            }
+                            if(timeoutCounter >= 2){
+                                    ERR_packet_send(sockfd, &cliaddr,&servaddr,len,0);
+                                    fprintf(stdout,"ERROR: timeout counter reached, ending transmition\n");
+                                    close(sockfd);
+                                    exit(1);
+                            }
+                            // Reset timeout counter
+                            timeoutCounter = 0;
+                            data = DATA_packet_read(buffer2, &sizeOfData ,&responceBlockID,data,mode,blockSize,n);
+                            if(responceBlockID < 0 ){
+                                    errorCode = ERR_packet_read(buffer2, errorMessage);
+                                    ERR_message_write(inet_ntoa(servaddr.sin_addr),ntohs(servaddr.sin_port), ntohs(cliaddr.sin_port),errorCode,errorMessage);
+                                    close(sockfd);
+                                    exit(1);
+                            }
+                            
+                            DATA_message_write(inet_ntoa(servaddr.sin_addr),ntohs(servaddr.sin_port), ntohs(cliaddr.sin_port), blockID);
+
+                            if(blockID - 1 == responceBlockID){
+                                    while(n<=0 && timeoutCounter < 3){
+                                                    while(n<=0 && timeoutCounter < 3){
+                                            n = recvfrom(sockfd, buffer2, sizeof(buffer2),0, (struct sockaddr*)&servaddr,&len);
+                                            if(n<0){
+                                                    fprintf(stdout, "ERROR: DATA, timeout error 2 %d \n", n);
+                                                    timeoutCounter ++;
+                                            }
+                                    }
+                                    if(timeoutCounter >= 2){
+                                            ERR_packet_send(sockfd,&cliaddr,&servaddr,len,0);
+                                            fprintf(stdout,"ERROR: timeout counter reached, ending transmition\n");
+                                            close(sockfd);
+                                            exit(1);
+                                            }                     
+                                    } 
+                                    if(responceBlockID < 0 ){
+                                            errorCode = ERR_packet_read(buffer2, errorMessage);
+                                            ERR_message_write(inet_ntoa(servaddr.sin_addr),ntohs(servaddr.sin_port), ntohs(cliaddr.sin_port),errorCode,errorMessage);
+                                            close(sockfd);
+                                            exit(1);
+                                    }   
+                            }
+                            else if (blockID == responceBlockID){
+                                    write_file(readFromFile,data,mode,n);
+                                    ACK_packet_send(sockfd,&cliaddr,&servaddr,sizeof cliaddr,blockID);
+                                    blockID++;
+                            }
+                            else {
+                                    ERR_packet_send(sockfd, &cliaddr,&servaddr,len,5);
+                                    free(data);
+                                    close(sockfd);
+                                    exit(1);
+                            }
+                            n = 0;
+                            free(data);
+                    }
+
+                    fclose(readFromFile);
+                    close(sockfd);
+
                     break;
             case 2:
-                    send_file(sockfd, &servaddr, &cliaddr, sizeof(cliaddr), filePath, mode, blockSize);
+                    //send_file(sockfd, &servaddr, &cliaddr, sizeof(cliaddr), filePath, mode, blockSize);
+
+
+                    blockID = 1;
+                    n = 0;
+                    timeoutCounter = 0;
+                    sizeOfData = blockSize;
+                    len = sizeof servaddr;
+
+                    if((readFromFile = fopen(filePath, "r")) < 0){
+                            ERR_packet_send(sockfd, &servaddr, &cliaddr, len, 0);
+                    }
+
+                    while(sizeOfData>=blockSize){
+                            char* data = read_file(readFromFile, mode, blockSize, &sizeOfData);
+                            dataPacket = DATA_packet_create(&sizeOfPacket, blockID, data , sizeOfData);
+
+                            // Send packet and resend if timeout is reached
+                            while(n<=0 && timeoutCounter < 3){
+                                    if(sendto(sockfd, dataPacket, sizeOfPacket, 0,(struct sockaddr*)&servaddr, len) < 0){
+                                            fprintf(stdout, "ERROR: DATA, failed to send, errno %d \n", errno);
+                                    }
+                                    n = recvfrom(sockfd, buffer2, sizeof(buffer2),0, (struct sockaddr*)&servaddr,&len);
+                                    if(n<0){
+                                            fprintf(stdout, "ERROR: DATA, timeout error %d \n", n);
+                                            timeoutCounter ++;
+                                    }
+                            }
+                            if(timeoutCounter >= 2){
+                                    ERR_packet_send(sockfd, &servaddr, &cliaddr,len,0);
+                                    fprintf(stdout,"ERROR: timeout counter reached, ending transmition\n");
+                                    close(sockfd);
+                                    exit(1);
+                            }
+
+                            // Reset timeout counter
+                            timeoutCounter = 0;
+
+                            responceBlockID = ACK_packet_read(buffer2);
+                            if( responceBlockID < 0){
+                                    ERR_packet_send(sockfd, &servaddr, &cliaddr,len,0);
+                                    fprintf(stdout,"ERROR: wrong opcode, ending transmition\n ");
+                                    close(sockfd);
+                                    exit(1);
+                            }
+
+                            if(blockID > responceBlockID){
+                                    while(n<=0 && timeoutCounter < 3){
+                                            if(sendto(sockfd, dataPacket, sizeOfPacket, 0,(struct sockaddr*)&servaddr, len) < 0){
+                                                    fprintf(stdout, "ERROR: DATA, failed to send, errno %d \n", errno);
+                                            }
+
+                                            n = recvfrom(sockfd, buffer2, sizeof(buffer2),0, (struct sockaddr*)&servaddr,&len);
+                                            if(n<0){
+                                                    fprintf(stdout, "ERROR: DATA, timeout error %d \n ", n);
+                                                    timeoutCounter ++;
+                                            }
+                                    } 
+                                    if(timeoutCounter >= 2){
+                                            ERR_packet_send(sockfd, &cliaddr, &servaddr,len,0);
+                                            fprintf(stdout,"ERROR: timeout counter reached, ending transmition\n");
+                                            close(sockfd);
+                                            exit(1);
+                                    }   
+                            }
+                            else if (blockID == responceBlockID){
+                                    ACK_message_write(inet_ntoa(servaddr.sin_addr),ntohs(servaddr.sin_port),responceBlockID);
+                                    free(data);
+                                    free(dataPacket);
+                                    blockID++;
+                            }
+                            else {
+                                    ERR_packet_send(sockfd, &cliaddr, &servaddr,len,5);
+                                    close(sockfd);
+                                    exit(1);
+                            }
+                            n = 0;
+                    }
+                    
+                    fclose(readFromFile);
+                    close(sockfd);
                     break;
+
+    ///     END OF START OF DOWNLOAD/UPLOAD LOGIC
+    ///
+    ////////////////////////////////////
+    ///
+    ///     START OF CLOSING
     }
 
 

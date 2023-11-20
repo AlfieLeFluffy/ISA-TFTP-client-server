@@ -1,6 +1,16 @@
+///////////////////////////////////////////////////////////////////////////////////////////
+///                                                                                     ///
+///     TFTP server/client include                                                      ///
+///                                                                                     ///
+///     vytvoril: Tomas Vlach                                                           ///
+///     login: xvlach24                                                                 ///
+///                                                                                     ///
+///////////////////////////////////////////////////////////////////////////////////////////
+
 char* OACK_packet_create(int* _returnSize, int _blockSize, int _timeout, int _tsize) { 
     size_t sizeOfPacket = 2+strlen("blocksize")+4+strlen("timeout")+3+strlen("tsize")+4;
     char* packet = (char *) malloc(sizeOfPacket);
+    memset(packet, 0, sizeOfPacket);
 
     int index = 2; 
 

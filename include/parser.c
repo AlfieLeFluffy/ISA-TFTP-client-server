@@ -10,8 +10,8 @@ void checkFolderExists(char* _folderPath){
 
 char* parseFolderPath(char* _folderPath){
     checkFolderExists(_folderPath);
-    if (_folderPath == NULL) fprintf(stdout, "Selected default path is base directory of this application\n");
-    else fprintf(stdout, "Selected default path is: %s\n", _folderPath);
+    if (_folderPath == NULL) fprintf(stdout, "SETUP: Selected default path is base directory of this application\n");
+    else fprintf(stdout, "SETUP: Selected default path is: %s\n", _folderPath);
     return _folderPath;
 }
 

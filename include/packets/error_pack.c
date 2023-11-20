@@ -1,3 +1,12 @@
+///////////////////////////////////////////////////////////////////////////////////////////
+///                                                                                     ///
+///     TFTP server/client include                                                      ///
+///                                                                                     ///
+///     vytvoril: Tomas Vlach                                                           ///
+///     login: xvlach24                                                                 ///
+///                                                                                     ///
+///////////////////////////////////////////////////////////////////////////////////////////
+
 #include <errno.h>
 
 #include "../lists/error_code_msg.h"
@@ -5,6 +14,8 @@
 char* ERR_packet_create(int* _returnSize, int _errorCode, char* _errorMessage) { 
     size_t sizeOfPacket = 4+strlen(_errorMessage);
     char* packet = (char *) malloc(sizeOfPacket);
+    memset(packet, 0, sizeOfPacket);
+
     if(_errorMessage==NULL){
         fprintf (stdout, "ERROR: internal error (no error code message)");
         exit(1);
@@ -18,6 +29,7 @@ char* ERR_packet_create(int* _returnSize, int _errorCode, char* _errorMessage) {
     packet[3] = _errorCode;
     strcat(packet, _errorMessage);
     strcat(packet, nullRepl);
+    packet[strlen(_errorMessage)+3] = nullRepl[0];
 
     for (int i = 0; i <= sizeOfPacket;i++){
         if(packet[i]== nullRepl[0]){

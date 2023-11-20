@@ -1,6 +1,11 @@
-/*
-    A list of predefined error code messages
-*/
+///////////////////////////////////////////////////////////////////////////////////////////
+///                                                                                     ///
+///     TFTP server/client include                                                      ///
+///                                                                                     ///
+///     vytvoril: Tomas Vlach                                                           ///
+///     login: xvlach24                                                                 ///
+///                                                                                     ///
+///////////////////////////////////////////////////////////////////////////////////////////
 
 char* errorMessage[] = {
     "Not defined, see error message (if any).\0",

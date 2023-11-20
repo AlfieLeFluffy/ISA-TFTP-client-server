@@ -1,7 +1,16 @@
+///////////////////////////////////////////////////////////////////////////////////////////
+///                                                                                     ///
+///     TFTP server/client include                                                      ///
+///                                                                                     ///
+///     vytvoril: Tomas Vlach                                                           ///
+///     login: xvlach24                                                                 ///
+///                                                                                     ///
+///////////////////////////////////////////////////////////////////////////////////////////
+
 char* DATA_packet_create(int* _returnSize, int _blockID, char* _data, int _sizeOfData) { 
     int sizeOfPacket = 4+_sizeOfData;
-
     char* packet = (char *) malloc(sizeOfPacket*sizeof(char));
+    memset(packet, 0, sizeOfPacket);
 
 
     packet[0] = '\0';
@@ -20,15 +29,25 @@ char* DATA_packet_create(int* _returnSize, int _blockID, char* _data, int _sizeO
     return packet;
 }
 
-int DATA_packet_read(char* _packet, char* _filename, char* _mode){
-    if(_packet[1] != 4){
-        fprintf(stdout, "ERROR: internal error (wrong opcode in DATA_packet_read)");
-        return -1;
+char* DATA_packet_read(char* _packet, int* _sizeOfData, int* _responceBlockID, char* _data, char* _mode, int _blockSize, int n){
+    char* data = (char *) malloc(n*sizeof(char));
+    memset(data, 0, n);
+
+    if(_packet[1] != 3){
+        fprintf(stdout, "ERROR: internal error (wrong opcode in DATA_packet_read)\n");
+        *_responceBlockID = -1;
+        return NULL;
     }
 
-    return (short)(((short)_packet[2]) << 8) | _packet[3];
+    for(int i = 4; i < n;i++){
+        data[i-4]=_packet[i];
+    }
+
+    *_responceBlockID = (unsigned char)_packet[2] << 8 | (unsigned char) _packet[3];
+    *_sizeOfData = n;
+    return data;
 }
 
-void DATA_request_write(int _opcode, struct sockaddr_in* _sinFrom, struct sockaddr_in* _sinTo, int _blockID){
-    fprintf(stderr, "DATA %s:%d:%d %d\n", inet_ntoa(_sinFrom->sin_addr),_sinFrom->sin_port, _sinTo->sin_port, _blockID);  
+void DATA_message_write(char* _ip, int _sourcePort, int _destinPort, int _blockID){
+    fprintf(stderr, "DATA %s:%d:%d %d\n", _ip, _sourcePort, _destinPort, _blockID);  
 }
