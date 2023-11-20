@@ -7,36 +7,42 @@
 ///                                                                                     ///
 ///////////////////////////////////////////////////////////////////////////////////////////
 
+// Standard include libraries
 #include <stdio.h>
-#include <strings.h>
 #include <sys/types.h>
-#include <arpa/inet.h>
 #include <sys/socket.h>
+#include <sys/statvfs.h>
+#include <string.h>
+#include <strings.h>
+#include <arpa/inet.h>
 #include <netinet/in.h>
 #include <unistd.h>
 #include <ctype.h>
 #include <stdlib.h>
-#include <string.h>
 #include <dirent.h>
 #include <errno.h>
-#include <sys/statvfs.h>
 
-
+// Includes all custom files
 #include "../include/common.c"
 #include "../include/parser.c"
 
+// Include all packet files
 #include "../include/packets/request_pack.c"
 #include "../include/packets/ack_pack.c"
 #include "../include/packets/oack_pack.c"
 #include "../include/packets/data_pack.c"
 #include "../include/packets/error_pack.c"
 
+// Include data flow and data work files
 #include "../include/read_write_file.c"
 #include "../include/send_file.c"
 #include "../include/recieve_file.c"
 
-
-int test_TFTP_request(int _opcode, char* _filePath, char* _mode){
+/// @brief Checks if the requested file is a valid input
+/// @param _opcode int input to determin what to check
+/// @param _filePath char* array of the file to be checked
+/// @return 0 - OK, # - ERROR
+int check_requested_file(int _opcode, char* _filePath){
         if(_opcode != 1 && _opcode != 2){
                 fprintf(stdout, "ERROR: opcode for request does not match possible opcodes, %d\n", _opcode);
                 return 4;
@@ -57,6 +63,14 @@ int test_TFTP_request(int _opcode, char* _filePath, char* _mode){
         return 0;
 }
 
+/// @brief Handles options for incoming requests and set appropriet values for them
+/// @param _opcode int type of request
+/// @param _folderpath char* array of default folder path
+/// @param _filepath char* array of the file to be operated on
+/// @param _blockSize int* option for blksize
+/// @param _timeout int* option for timeout
+/// @param _tsize int* option for tsize
+/// @return 0 - OK, # - ERROR
 int handle_options(int _opcode, char* _folderpath, char* _filepath, unsigned int* _blockSize, unsigned int* _timeout, unsigned int* _tsize){
         FILE* testfile;
         switch(_opcode){
@@ -117,8 +131,10 @@ int handle_options(int _opcode, char* _folderpath, char* _filepath, unsigned int
         return 0;
 }
 
-///Joins incoming filename with default filefolder to create filepath
-///Parameters are a char array of incoming filename and a char array of the default folderpath
+/// @brief Joins folderpath and filepath into one char* array
+/// @param _filename char* array for filepath
+/// @param _folderPath char* array for folderpath
+/// @return char* array of the filepath with included default folderpath
 char* create_file_path(char* _filename, char* _folderPath){
         char* filePath = (char*)malloc(sizeof(_filename)+sizeof(_folderPath)+2);
         
@@ -129,7 +145,10 @@ char* create_file_path(char* _filename, char* _folderPath){
         return filePath;
 }
 
-  
+/// @brief Main logic function of tftp-server
+/// @param argc list of arguments
+/// @param argv amount of arguments
+/// @return 0 - tftp transaction was succesful, 1 - tftp transaction was not succesful
 int main(int argc, char *argv[]) 
 {
         int port = 69;
@@ -254,7 +273,7 @@ int main(int argc, char *argv[])
                                 close(listenfd);
                                 return -1;
                         }
-                        errorCode = test_TFTP_request(opcode, filePath, mode);
+                        errorCode = check_requested_file(opcode, filePath);
                         if(errorCode>0){
                                 ERR_packet_send(listenfd, &servaddr,&cliaddr, sizeof(cliaddr),errorCode);
                                 return -1;

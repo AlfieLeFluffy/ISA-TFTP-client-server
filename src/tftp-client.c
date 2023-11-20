@@ -7,35 +7,43 @@
 ///                                                                                     ///
 ///////////////////////////////////////////////////////////////////////////////////////////
 
+// Standard include libraries
 #include <stdio.h>
-#include <strings.h>
 #include <sys/types.h>
-#include <arpa/inet.h>
 #include <sys/socket.h>
+#include <sys/statvfs.h>
+#include <string.h>
+#include <strings.h>
+#include <arpa/inet.h>
 #include <netinet/in.h>
 #include <unistd.h>
 #include <ctype.h>
 #include <stdlib.h>
-#include <string.h>
-#include <netdb.h>
+#include <dirent.h>
 #include <errno.h>
-#include <sys/statvfs.h>
+#include <netdb.h>
 
+
+// Includes all custom files
 #include "../include/common.c"
 #include "../include/parser.c"
 
+// Include all packet files
 #include "../include/packets/request_pack.c"
 #include "../include/packets/ack_pack.c"
 #include "../include/packets/oack_pack.c"
 #include "../include/packets/data_pack.c"
 #include "../include/packets/error_pack.c"
 
-
+// Include data flow and data work files
 #include "../include/read_write_file.c"
 #include "../include/send_file.c"
 #include "../include/recieve_file.c"
 
 
+/// @brief Checks if the given IP is valid or in valid format
+/// @param _ip char* array of the IP
+/// @return 0 - is alright, 1 - is not alright
 int check_ip_valid(char* _ip){
     struct sockaddr_in sa;
     int result = inet_pton(AF_INET, _ip, &(sa.sin_addr));
@@ -43,7 +51,10 @@ int check_ip_valid(char* _ip){
     return 0;
 }
 
-char* resolve_hostname(char* _result,char* _hostname){
+/// @brief Attempts to resolve a hostname from given char* array
+/// @param _hostname char* array, takes input
+/// @return returns char* array with the hostname IP
+char* resolve_hostname(char* _hostname){
     struct addrinfo *result;
     if (getaddrinfo (_hostname, NULL, NULL, &result))
     {
@@ -53,6 +64,12 @@ char* resolve_hostname(char* _result,char* _hostname){
     return inet_ntoa(((struct sockaddr_in *)result->ai_addr)->sin_addr);
 }
 
+/// @brief Checks and creates options for WRQ
+/// @param _filepath char* array of the file to be sent
+/// @param _blockSize int* option for blksize
+/// @param _timeout int* option for timeout
+/// @param _tsize int* option for tsize
+/// @return 0 - OK, # - ERROR
 int handle_options_send(char* _filepath, unsigned int* _blockSize, unsigned int* _timeout, unsigned int* _tsize){
         FILE* testfile;
 
@@ -91,6 +108,12 @@ int handle_options_send(char* _filepath, unsigned int* _blockSize, unsigned int*
         return 0;
 }
 
+/// @brief Checks and sets options for RRQ
+/// @param _filepath char* array of the file to be sent
+/// @param _blockSize int* option for blksize
+/// @param _timeout int* option for timeout
+/// @param _tsize int* option for tsize
+/// @return 0 - OK, # - ERROR
 int handle_options_recieve(int _blockSize, int _timeout, int _tsize){
         // Check if blocksize is not outside allowed parameters
         if(512>_blockSize || _blockSize>65500)return 8;
@@ -110,7 +133,10 @@ int handle_options_recieve(int _blockSize, int _timeout, int _tsize){
     return 0;
 }
   
-
+/// @brief Main logic function of tftp-client
+/// @param argc list of arguments
+/// @param argv amount of arguments
+/// @return 0 - tftp transaction was succesful, 1 - tftp transaction was not succesful
 int main(int argc, char *argv[]) 
 {
     ////////////////////////////////////
@@ -191,7 +217,7 @@ int main(int argc, char *argv[])
 
     // Checks if ip address is valid and tries to resolve for hostname if not
     if(!check_ip_valid(ip)){
-        ip = resolve_hostname(ip,ip);
+        ip = resolve_hostname(ip);
         if(strcmp(ip, "\0"))exit(1);
     }
 
